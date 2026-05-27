@@ -1,0 +1,42 @@
+/* Hide the scrollbar but keep scroll functionality */
+html {
+  height: 100%;
+  overflow-x: hidden; /* Hide horizontal scrollbar */
+  overflow-y: auto; /* Allow vertical scrolling */
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* Hide horizontal scrollbar */
+  overflow-y: auto; /* Allow vertical scrolling */
+  /* background-image: url("/assets/images/bgcar.jpg"); */
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* For Webkit browsers (Chrome, Safari) */
+::-webkit-scrollbar {
+  display: none; /* Hide scrollbar */
+  scrollbar-width: none; /* Hide scrollbar in Firefox */
+}
+@keyframes moveLoader {
+  0% {
+    transform: translateX(-70vw);
+  }
+  100% {
+    transform: translateX(70vw);
+  }
+}
+/* Apply the animation with a slower speed */
+#loader {
+  animation: moveLoader 10s linear infinite; /* Increase duration to 5 seconds */
+}
+
+/* Hide NextJs error message */
+/* nextjs-portal {
+  display: none;
+} */
