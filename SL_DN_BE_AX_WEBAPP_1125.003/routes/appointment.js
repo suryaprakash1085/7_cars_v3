@@ -16,7 +16,7 @@ router.use(validateCompanyCodePresence);
 // Root endpoints
 router.post("/", appointmentController.createAppointment);
 router.get("/", appointmentController.getAllAppointments);
-
+router.get("/gst_allappointments", appointmentController.getAllAppointmentsForGST);
 // Search endpoints
 router.get("/search/appointments", appointmentController.searchAppointments);
 

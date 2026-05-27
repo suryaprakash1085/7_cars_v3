@@ -8,7 +8,10 @@ export async function fetchEntries(
   setFilteredEntries,
   setLoading,
   setError,
-  setNotFound
+  // setNotFound,
+  startDate,
+  endDate,
+  status
 ) {
   try {
     const token = Cookies.get("token");
@@ -18,8 +21,14 @@ export async function fetchEntries(
       return;
     }
 
+ const params = new URLSearchParams({   
+      ...(startDate && { startDate: startDate }),
+      ...(endDate && { endDate: endDate }),
+       ...(status && { status: status }),
+    });
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/appointment`,
+      `${process.env.NEXT_PUBLIC_API_URL}/appointment?${params.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -32,14 +41,14 @@ export async function fetchEntries(
 
     const data = await response.json();
     // console.log("data", data);
-    const filteredServiceData = data.filter((sd) => {
-      return sd.status=="released" 
-    }) 
-    console.log("filteredServiceData", filteredServiceData);
-    setEntries(filteredServiceData);
-    setFilteredEntries(filteredServiceData);
+    // const filteredServiceData = data.filter((sd) => {
+    //   return sd.status=="released" 
+    // }) 
+    console.log("filteredServiceData", data);
+    setEntries(data);
+    setFilteredEntries(data);
     setLoading(false);
-    if (filteredServiceData.length === 0) {
+    if (data.length === 0) {
       setNotFound(true);
     } else {
       setNotFound(false);

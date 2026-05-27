@@ -52,7 +52,8 @@ export default function InvoiceList() {
       setSnackbarMessage,
       setSnackBarSeverity,
       startDate,
-      endDate
+      endDate,
+      "invoiced"
     );
   }, [startDate, endDate]);
   // console.log("Entries in page component:", entries);

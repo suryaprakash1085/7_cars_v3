@@ -20,9 +20,29 @@ export default function ServiceCenter() {
   const [filteredEntries, setFilteredEntries] = useState([]);
   const [searchText, setSearchText] = useState("");
 
+
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+  
+    const [startDate, setStartDate] = useState(() => {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      return formatDate(firstDay);
+    });
+  
+    const [endDate, setEndDate] = useState(() => {
+      const today = new Date();
+      return formatDate(today);
+    });
+
+
   useEffect(() => {
-    fetchEntries(setEntries, setFilteredEntries, setLoading, setError, () => {});
-  }, []);
+    fetchEntries(setEntries, setFilteredEntries, setLoading, setError, startDate, endDate, "released");
+  }, [startDate, endDate]);
 
   const columns = [
     {
@@ -60,6 +80,20 @@ export default function ServiceCenter() {
     },
   ];
 
+
+    const dateFilters = [
+    {
+      label: "Start Date",
+      value: startDate,
+      onChange: (e) => setStartDate(e.target.value),
+    },
+    {
+      label: "End Date",
+      value: endDate,
+      onChange: (e) => setEndDate(e.target.value),
+    },
+  ];
+
   const handleSearchSubmit = async () => {
     await handleSearch(searchText, "vehicleModel", entries, setFilteredEntries);
   };
@@ -83,6 +117,7 @@ export default function ServiceCenter() {
         open: false,
         onClose: () => {},
       }}
+      dateFilters={dateFilters}
       scrollableTableId="scrollable-table"
     />
   );

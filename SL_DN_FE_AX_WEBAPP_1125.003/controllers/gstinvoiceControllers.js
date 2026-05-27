@@ -1,7 +1,3 @@
-import Cookies from "js-cookie";
-
-
-
 async function fetchEntries(
   token,
   setEntries,
@@ -10,8 +6,9 @@ async function fetchEntries(
   setSnackbarMessage,
   setSnackBarSeverity,
   startDate, // new parameter
-  endDate  ,
-  status  // new parameter
+  endDate  ,  // new parameter
+    status,     // new parameter
+    include_gst // new parameter
 ) {
   try {
     if (!token) {
@@ -28,10 +25,12 @@ async function fetchEntries(
     const params = new URLSearchParams();
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
-    // if (status) params.append("status", invoiced);
-if (status) params.append("status", status);
+    if (status) params.append("status", "invoiced");
+    if (include_gst) params.append("include_gst", "true");
+  
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/appointment?${params.toString()}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/appointment/gst_allappointments?${params.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -53,6 +52,7 @@ if (status) params.append("status", status);
 }
 
 
+import Cookies from "js-cookie";
 
 // Helper function to get company_code from cookies
 function getCompanyCode() {
