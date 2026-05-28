@@ -19,8 +19,45 @@ export default function ServiceCenter() {
   const [entries, setEntries] = useState([]);
   const [filteredEntries, setFilteredEntries] = useState([]);
   const [searchText, setSearchText] = useState("");
+  const [notFound, setNotFound] = useState(false);
+const [limit, setLimit] = useState(20);
+// const [offset, setOffset] = useState(0);
+const offsetRef = React.useRef(0);
+const [hasMore, setHasMore] = useState(true);
+const isFetching = React.useRef(false);
+const handleScroll = async (e) => {
+  const { scrollTop, scrollHeight, clientHeight } = e.target;
 
+  if (isFetching.current) return;
 
+if (
+  scrollHeight - scrollTop <= clientHeight + 50 &&
+  hasMore &&
+  !isFetching.current
+) {
+    isFetching.current = true;
+
+    const nextOffset = offsetRef.current + limit;
+    offsetRef.current = nextOffset;
+
+    await fetchEntries(
+      setEntries,
+      setFilteredEntries,
+      setLoading,
+      setError,
+      setNotFound,
+      startDate,
+      endDate,
+      "released",
+      limit,
+      nextOffset,
+      setHasMore,
+      false
+    );
+
+    isFetching.current = false;
+  }
+};
     const formatDate = (date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -40,10 +77,30 @@ export default function ServiceCenter() {
     });
 
 
-  useEffect(() => {
-    fetchEntries(setEntries, setFilteredEntries, setLoading, setError, startDate, endDate, "released");
-  }, [startDate, endDate]);
+  // useEffect(() => {
+  //   fetchEntries(setEntries, setFilteredEntries, setLoading, setError,setNotFound, startDate, endDate, "released",limit, 0,  
+  
+  // setOffset,
+  // setHasMore);
+  // }, [startDate, endDate]);
+useEffect(() => {
+  offsetRef.current = 0;// reset pagination state
 
+  fetchEntries(
+    setEntries,
+    setFilteredEntries,
+    setLoading,
+    setError,
+    setNotFound,
+    startDate,
+    endDate,
+    "released",
+    limit,
+    0,
+    setHasMore,
+    true
+  );
+}, [startDate, endDate]);
   const columns = [
     {
       key: "customer_name",
@@ -119,6 +176,7 @@ export default function ServiceCenter() {
       }}
       dateFilters={dateFilters}
       scrollableTableId="scrollable-table"
+       onScroll={handleScroll}
     />
   );
 }

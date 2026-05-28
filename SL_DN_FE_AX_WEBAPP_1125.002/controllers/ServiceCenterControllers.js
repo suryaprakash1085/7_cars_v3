@@ -1,6 +1,6 @@
 
 import Cookies from "js-cookie";
-import serviceCenter from "../src/app/views/serviceCenter/page";
+// import serviceCenter from "../src/app/views/serviceCenter/page";
 
 // Function to fetch entries from the backend
 export async function fetchEntries(
@@ -8,10 +8,14 @@ export async function fetchEntries(
   setFilteredEntries,
   setLoading,
   setError,
-  // setNotFound,
+  setNotFound,
   startDate,
   endDate,
-  status
+  status,
+  limit,
+  offset,
+  setHasMore,
+  reset = false
 ) {
   try {
     const token = Cookies.get("token");
@@ -25,7 +29,10 @@ export async function fetchEntries(
       ...(startDate && { startDate: startDate }),
       ...(endDate && { endDate: endDate }),
        ...(status && { status: status }),
-    });
+     ...(limit && { limit }),
+  // ...(offset >= 0 && { offset }),
+  ...(offset !== undefined && { offset }),
+});
 
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/appointment?${params.toString()}`,
@@ -45,14 +52,52 @@ export async function fetchEntries(
     //   return sd.status=="released" 
     // }) 
     console.log("filteredServiceData", data);
-    setEntries(data);
-    setFilteredEntries(data);
+    // setEntries(data);
+    // setFilteredEntries(data);
+//     setEntries(Array.isArray(data) ? data : data.data || []);
+// setFilteredEntries(Array.isArray(data) ? data : data.data || []);
+// const safeData =
+//   Array.isArray(data?.data)
+//     ? data.data
+//     : Array.isArray(data)
+//     ? data
+//     : [];
+const safeData = Array.isArray(data)
+  ? data
+  : Array.isArray(data?.data)
+  ? data.data
+  : Array.isArray(data?.data?.list)
+  ? data.data.list
+  : [];
+if (safeData.length < limit) {
+  setHasMore(false);
+} else {
+  setHasMore(true);
+}
+// setEntries(safeData);
+// setFilteredEntries(safeData);
+// setEntries((prev) => [...prev, ...safeData]);
+// setFilteredEntries((prev) => [...prev, ...safeData]);
+// setEntries((prev) => (offset === 0 ? safeData : [...prev, ...safeData]));
+setEntries((prev) => {
+  return reset ? safeData : [...prev, ...safeData];
+});
+
+setFilteredEntries((prev) => {
+  return reset ? safeData : [...prev, ...safeData];
+});
+// setOffset((prev) => prev + limit);
     setLoading(false);
-    if (data.length === 0) {
-      setNotFound(true);
-    } else {
-      setNotFound(false);
-    }
+    // if (data.length === 0) {
+    //   setNotFound(true);
+    // } else {
+    //   setNotFound(false);
+    // }
+    if (safeData.length === 0) {
+  setNotFound?.(true);
+} else {
+  setNotFound?.(false);
+}
   } catch (err) {
     setError(err.message);
     setLoading(false);
