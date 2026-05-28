@@ -516,7 +516,7 @@ const generatePDF = async ({
                     (pageIndex + 1) * itemsPerPage,
                   )
                   .map((spare, index) => {
-                    // ✅ JS LOGIC HERE
+                    //   JS LOGIC HERE
                     const qty = Number(spare.qty ?? 0);
                     const rate = Number(spare.price ?? 0);
                     const baseAmount = qty * rate;
@@ -529,7 +529,7 @@ const generatePDF = async ({
 
                     const displayQty = qty % 1 === 0 ? qty : qty.toFixed(1);
 
-                    // ✅ JSX RETURN
+                    //   JSX RETURN
                     return (
                       <View key={index} style={{ flexDirection: "row" }}>
                         <View style={{ width: columns.sno, padding: 4 }}>

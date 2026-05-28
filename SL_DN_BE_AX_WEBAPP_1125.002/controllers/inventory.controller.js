@@ -631,7 +631,7 @@ export async function decreaseInventoryQuantity(req, res) {
   }
 }
 
-// ✅ ENHANCED: Reconcile inventory balance from transactions
+//   ENHANCED: Reconcile inventory balance from transactions
 // This endpoint recalculates inventory.quantity based on transactions
 // Formula: SUM(Received + Buy) - SUM(Consumed) for each inventory item
 // Transaction types considered:

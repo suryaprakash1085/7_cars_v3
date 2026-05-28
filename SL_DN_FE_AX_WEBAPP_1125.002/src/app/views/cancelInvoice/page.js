@@ -42,7 +42,7 @@ export default function CancelInvoice() {
   });
   const [endDate, setEndDate] = useState(() => formatDate(new Date()));
 
-  // ✅ Refs for scroll pagination
+  //   Refs for scroll pagination
   const offsetRef = useRef(0);
   const hasMoreRef = useRef(true);
   const loadingRef = useRef(false);
@@ -58,7 +58,7 @@ export default function CancelInvoice() {
 
   const noOp = () => {};
 
-  // ✅ Initial load / date change
+  //   Initial load / date change
   useEffect(() => {
     const storedToken = Cookies.get("token");
     setToken(storedToken);
@@ -98,7 +98,7 @@ export default function CancelInvoice() {
     });
   }, [startDate, endDate]);
 
-  // ✅ Scroll handler
+  //   Scroll handler
   const handleScroll = (event) => {
     scrollToTopButtonDisplay(event, setShowFab);
 
@@ -109,7 +109,7 @@ export default function CancelInvoice() {
     if (loadingRef.current) return;
 
     if (scrollHeight - scrollTop <= clientHeight + 200) {
-      console.log("✅ API calling offset:", offsetRef.current);
+      console.log("  API calling offset:", offsetRef.current);
       loadingRef.current = true;
 
       fetchEntries(

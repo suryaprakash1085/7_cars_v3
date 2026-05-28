@@ -8,7 +8,7 @@ import {
   fetchEntries,
   handleSearch,
   handleScrollToTop,
-  scrollToTopButtonDisplay,
+  scrollToTopButtonDisplay,companydetails
 } from "../../../../controllers/invoiceListControllers";
 
 export default function InvoiceList() {
@@ -28,7 +28,7 @@ export default function InvoiceList() {
   const [showFab, setShowFab] = useState(false);
 
 const totalRef = useRef(0);
-  const limit = 20;
+const [limit, setLimit] = useState(null);
 
   const offsetRef = useRef(0);
   const hasMoreRef = useRef(true);
@@ -56,12 +56,32 @@ const totalRef = useRef(0);
   useEffect(() => { startDateRef.current = startDate; }, [startDate]);
   useEffect(() => { endDateRef.current = endDate; }, [endDate]);
 
+
   useEffect(() => {
+  const fetchCompanyDetails = async () => {
+    try {
+      const details = await companydetails();
+      if (details?.company_details?.length > 0) {
+        const fetchLimit = Number(details.company_details[0].fetch_limit) || 20;
+        setLimit(fetchLimit);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  fetchCompanyDetails();
+}, []);
+
+
+
+
+  useEffect(() => {
+     if (limit === null) return; //
     const storedToken = Cookies.get("token");
     setToken(storedToken);
-    tokenRef.current = storedToken;           // ✅ store in ref
-    startDateRef.current = startDate;         // ✅ sync immediately
-    endDateRef.current = endDate;             // ✅ sync immediately
+    tokenRef.current = storedToken;           //   store in ref
+    startDateRef.current = startDate;         //   sync immediately
+    endDateRef.current = endDate;             //   sync immediately
     setPageType(Cookies.get("page_type"));
 
     offsetRef.current = 0;
@@ -84,7 +104,7 @@ const totalRef = useRef(0);
       false
     ).then((result) => {
   console.log("first load result:", result?.length);
-  // ✅ only stop when empty, not when less than limit
+  //   only stop when empty, not when less than limit
   if (!result || result.length === 0) {
     hasMoreRef.current = false;
   } else {
@@ -95,7 +115,7 @@ const totalRef = useRef(0);
   loadingRef.current = false;
 });
 
-  }, [startDate, endDate]);
+  }, [startDate, endDate, limit]);
 
   useEffect(() => {
     setOriginalEntries(entries);
@@ -113,9 +133,9 @@ const totalRef = useRef(0);
   if (loadingRef.current) return;
 
   if (scrollHeight - scrollTop <= clientHeight + 200) {
-    console.log("✅ API calling offset:", offsetRef.current);
+    console.log("  API calling offset:", offsetRef.current);
 
-    loadingRef.current = true; // ✅ block immediately — same line, but now BEFORE fetch
+    loadingRef.current = true; //   block immediately — same line, but now BEFORE fetch
 
     fetchEntries(
       tokenRef.current,
@@ -142,7 +162,7 @@ const totalRef = useRef(0);
   } else {
     const newOffset = offsetRef.current + result.data.length;
     offsetRef.current = newOffset;
-    hasMoreRef.current = newOffset < totalRef.current; // ✅ stops exactly at total
+    hasMoreRef.current = newOffset < totalRef.current; //   stops exactly at total
   }
   loadingRef.current = false;
 });

@@ -8,7 +8,7 @@ import Cookies from "js-cookie";
 import { motion } from "framer-motion";
 import { Box, Card, Tabs, Tab } from "@mui/material";
 
-// ✅ YOUR TILES (ONLY THESE WILL EVER SHOW)
+//   YOUR TILES (ONLY THESE WILL EVER SHOW)
 const allTiles = [
   {
     name: "customerReport",
@@ -34,7 +34,7 @@ export default function Sidebar() {
   const [tabValue, setTabValue] = useState(0);
   const [pageType, setPageType] = useState("");
 
-  // ✅ normalize function
+  //   normalize function
   const normalize = (str = "") =>
     str.toLowerCase().replace(/\s+/g, " ").trim();
 
@@ -56,7 +56,7 @@ export default function Sidebar() {
       try {
         const accessList = JSON.parse(access);
 
-        // ✅ normalize access names
+        //   normalize access names
         const accessNames = accessList.map((item) => {
           if (typeof item === "string") return normalize(item);
 
@@ -69,7 +69,7 @@ export default function Sidebar() {
           return "";
         });
 
-        // ✅ STRICT FILTER (ONLY MATCH EXACT)
+        //   STRICT FILTER (ONLY MATCH EXACT)
         const filteredTiles = allTiles.filter((tile) => {
           const tileName = normalize(tile.name);
           return accessNames.includes(tileName);

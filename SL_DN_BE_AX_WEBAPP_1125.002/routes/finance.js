@@ -359,7 +359,7 @@ router.get("/transactions", async (req, res) => {
       .leftJoin(
         "appointments as a",
         "f.appointment_id",
-        "a.appointment_id" // ✅ CORRECT JOIN
+        "a.appointment_id" //   CORRECT JOIN
       )
       .select(
         "f.*",

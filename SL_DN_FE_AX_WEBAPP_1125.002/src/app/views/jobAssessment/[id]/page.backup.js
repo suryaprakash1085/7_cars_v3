@@ -145,7 +145,7 @@ const CustomerDetail = () => {
 
 
 
-    const [statusChange, setStatusChange] = useState(""); // ✅ ADD HERE
+    const [statusChange, setStatusChange] = useState(""); //   ADD HERE
 
     // Header state for adding issues and spares
     const [headerReportedIssue, setHeaderReportedIssue] = useState("");

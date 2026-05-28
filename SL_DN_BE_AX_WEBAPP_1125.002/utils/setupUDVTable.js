@@ -18,7 +18,7 @@ export async function setupUDVTable() {
     // Test database connection first
     try {
       await withTimeout(knex.raw("SELECT 1"), 5000);
-      console.log("✅ Database connection verified");
+      console.log("  Database connection verified");
     } catch (connError) {
       console.warn("⚠️  Database connection issue:", connError.message);
       throw connError;
@@ -48,12 +48,12 @@ export async function setupUDVTable() {
         5000
       );
 
-      console.log("✅ udv_items table created successfully");
+      console.log("  udv_items table created successfully");
     } else {
       // Check if table needs migration for new status
       const hasUpdatedStatus = await withTimeout(knex.schema.hasColumn("udv_items", "failure_reason"), 5000);
       if (hasUpdatedStatus) {
-        console.log("✅ udv_items table already exists and is properly configured");
+        console.log("  udv_items table already exists and is properly configured");
       }
     }
   } catch (error) {

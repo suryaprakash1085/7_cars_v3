@@ -41,17 +41,17 @@ async function fetchEntries(
 
     const data = await response.json();
 
-    // ✅ log exact shape to confirm
+    //   log exact shape to confirm
     console.log("API raw response keys:", Object.keys(data));
     console.log("data.data:", data.data);
     console.log("Array.isArray(data):", Array.isArray(data));
     console.log("Array.isArray(data.data):", Array.isArray(data.data));
 
-    // ✅ handle all shapes
+    //   handle all shapes
    const newData = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
 const total = data.total ?? newData.length;
 
-    console.log("✅ newData length:", newData.length, "limit:", limit, "offset:", offset);
+    console.log("  newData length:", newData.length, "limit:", limit, "offset:", offset);
 
    if (append) {
   setEntries((prev) => [...prev, ...newData]);
@@ -131,6 +131,17 @@ export const handleScrollToTop = () => {
 export const scrollToTopButtonDisplay = (event, setShowFab) => {
   const { scrollTop } = event.target;
   setShowFab(scrollTop > 10);
+};
+
+export const companydetails = async () => {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ss`);
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error("Error fetching company details:", err);
+    throw err;
+  }
 };
 
 export { fetchEntries, handleSearch };

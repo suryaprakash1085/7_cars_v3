@@ -1906,7 +1906,7 @@ console.log("full Type", fuelType);
           const randomNum = Math.floor(1000 + Math.random() * 9000);
           setDlgPlateNumber(`for-regn-${randomNum}`);
 
-          // ✅ AUTO SELECT CURRENT YEAR (example: 2026)
+          //   AUTO SELECT CURRENT YEAR (example: 2026)
           setDlgYear(String(new Date().getFullYear()));
         } else {
           setDlgPlateNumber("");

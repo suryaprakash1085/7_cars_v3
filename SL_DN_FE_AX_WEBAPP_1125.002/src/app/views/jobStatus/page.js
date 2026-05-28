@@ -6,6 +6,7 @@ import {
   fetchEntries,
   handleScrollToTop,
   scrollToTopButtonDisplay,
+  companydetails,
 } from "../../../../controllers/jobStatusControllers";
 import Navbar from "../../../components/navbar";
 import DataNotFound from "@/components/dataNotFound";
@@ -31,7 +32,6 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const limit = 20;
 
 function LinearProgressWithLabel(props) {
   const { counterSales, ...rest } = props;
@@ -73,7 +73,7 @@ export default function JobStatus() {
   });
   const [endDate, setEndDate] = useState(() => formatDate(new Date()));
 
-  // ✅ Refs for scroll pagination
+  //   Refs for scroll pagination
   const offsetRef = useRef(0);
   const hasMoreRef = useRef(true);
   const loadingRef = useRef(false);
@@ -89,51 +89,75 @@ export default function JobStatus() {
   useEffect(() => { showDeletedRef.current = showDeleted; }, [showDeleted]);
   useEffect(() => { searchQueryRef.current = searchQuery; }, [searchQuery]);
 
-  // ✅ Initial load
+
+
+
+
+  const [limit, setLimit] = useState(null);
+
+
   useEffect(() => {
-    const storedToken = Cookies.get("token");
-    setToken(storedToken);
-    tokenRef.current = storedToken;
-    startDateRef.current = startDate;
-    endDateRef.current = endDate;
-    showDeletedRef.current = showDeleted;
-    setPageType(Cookies.get("page_type"));
-
-    offsetRef.current = 0;
-    hasMoreRef.current = true;
-    loadingRef.current = false;
-    setEntries([]);
-    setFilteredEntries([]);
-
-    fetchEntries(
-      storedToken,
-      setEntries,
-      setFilteredEntries,
-      setLoading,
-      setTotalVehicleInService,
-      setOpenSnackbar,
-      setSnackbarMessage,
-      setSnackBarSeverity,
-      showDeleted,
-      startDate,
-      endDate,
-      searchQuery,
-      limit,
-      0,
-      false
-    ).then((result) => {
-      if (!result || result.data.length === 0) {
-        hasMoreRef.current = false;
-      } else {
-        totalRef.current = result.total;
-        offsetRef.current = limit;
-        hasMoreRef.current = result.total > limit;
+  const fetchCompanyDetails = async () => {
+    try {
+      const details = await companydetails();
+      if (details?.company_details?.length > 0) {
+        const fetchLimit = Number(details.company_details[0].fetch_limit) || 20;
+        setLimit(fetchLimit);
       }
-      loadingRef.current = false;
-    });
-  }, [showDeleted, startDate, endDate, searchQuery]);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  fetchCompanyDetails();
+}, []);
+  //   Initial load
+ useEffect(() => {
+  if (limit === null) return;  //   wait for limit
 
-  // ✅ Init collapse states when filteredEntries change
+  const storedToken = Cookies.get("token");
+  setToken(storedToken);
+  tokenRef.current = storedToken;
+  startDateRef.current = startDate;
+  endDateRef.current = endDate;
+  showDeletedRef.current = showDeleted;
+  setPageType(Cookies.get("page_type"));
+
+  offsetRef.current = 0;
+  hasMoreRef.current = true;
+  loadingRef.current = false;
+  setEntries([]);
+  setFilteredEntries([]);
+
+  fetchEntries(
+    storedToken,
+    setEntries,
+    setFilteredEntries,
+    setLoading,
+    setTotalVehicleInService,
+    setOpenSnackbar,
+    setSnackbarMessage,
+    setSnackBarSeverity,
+    showDeleted,
+    startDate,
+    endDate,
+    searchQuery,
+    limit,   //   from state
+    0,
+    false
+  ).then((result) => {
+    if (!result || result.data.length === 0) {
+      hasMoreRef.current = false;
+    } else {
+      totalRef.current = result.total;
+      offsetRef.current = limit;
+      hasMoreRef.current = result.total > limit;
+    }
+    loadingRef.current = false;
+  });
+}, [showDeleted, startDate, endDate, searchQuery, limit]); //   add limit
+
+
+  //   Init collapse states when filteredEntries change
   useEffect(() => {
     const initialCollapsedStates = {};
     Object.keys(groupedEntries).forEach((status) => {
@@ -146,7 +170,7 @@ export default function JobStatus() {
     }
   }, [filteredEntries]);
 
-  // ✅ Scroll handler
+  //   Scroll handler
   const handleScroll = (event) => {
     scrollToTopButtonDisplay(event, setShowFab);
 
@@ -157,7 +181,7 @@ export default function JobStatus() {
     if (loadingRef.current) return;
 
     if (scrollHeight - scrollTop <= clientHeight + 200) {
-      console.log("✅ API calling offset:", offsetRef.current);
+      console.log("  API calling offset:", offsetRef.current);
       loadingRef.current = true;
 
       fetchEntries(
@@ -263,7 +287,7 @@ export default function JobStatus() {
             </Box>
           </Box>
 
-          {/* ✅ Scrollable container */}
+          {/*   Scrollable container */}
           <Box
             id="scrollable-table"
             onScroll={handleScroll}

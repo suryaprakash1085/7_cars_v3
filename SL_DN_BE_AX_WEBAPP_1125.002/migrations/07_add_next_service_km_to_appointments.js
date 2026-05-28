@@ -27,12 +27,12 @@ export async function up() {
             await knex.schema.table("appointments", (table) => {
                 table.integer("next_service_km").nullable().defaultTo(null);
             });
-            console.log("✅ Added next_service_km column to appointments");
+            console.log("  Added next_service_km column to appointments");
         } else {
-            console.log("✅ next_service_km column already exists in appointments");
+            console.log("  next_service_km column already exists in appointments");
         }
 
-        console.log("✅ Migration completed successfully");
+        console.log("  Migration completed successfully");
     } catch (error) {
         console.error("❌ Migration failed:", error.message);
         throw error;
@@ -49,10 +49,10 @@ export async function down() {
             await knex.schema.table("appointments", (table) => {
                 table.dropColumn("next_service_km");
             });
-            console.log("✅ Dropped next_service_km column from appointments");
+            console.log("  Dropped next_service_km column from appointments");
         }
 
-        console.log("✅ Rollback completed successfully");
+        console.log("  Rollback completed successfully");
     } catch (error) {
         console.error("❌ Rollback failed:", error.message);
         throw error;

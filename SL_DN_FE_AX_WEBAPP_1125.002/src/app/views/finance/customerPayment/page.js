@@ -181,7 +181,7 @@ function CustomerPaymentContent() {
             );
           }
 
-          // ✅ FRONTEND PAID_STATUS ORDER: not paid → partially paid → paid
+          //   FRONTEND PAID_STATUS ORDER: not paid → partially paid → paid
           data.sort((a, b) => {
             const order = { "not paid": 0, "partially paid": 1, "paid": 2 };
             return (order[a.paid_status] ?? 3) - (order[b.paid_status] ?? 3);

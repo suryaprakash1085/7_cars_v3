@@ -160,7 +160,7 @@ const [appointmentDate,setAppointmentDate] = useState("");
     setIsChatOpen(!isChatOpen);
   };
 
-  const [statusChange, setStatusChange] = useState(""); // ✅ ADD HERE
+  const [statusChange, setStatusChange] = useState(""); //   ADD HERE
   const [newSpareInputs, setNewSpareInputs] = useState({});
   const spareInputRefs = useRef({});
   const [editingSpare, setEditingSpare] = useState({
@@ -352,8 +352,8 @@ const [appointmentDate,setAppointmentDate] = useState("");
         setAppointmentDataLog(appointmentData);
         appointmentLoadedRef.current = true;
 
-        // ✅ Sales ID
-       // ✅ Sales ID
+        //   Sales ID
+       //   Sales ID
 if (appointmentData.sales_id) {
   setSelectedSales(
     Array.isArray(appointmentData.sales_id)
@@ -370,7 +370,7 @@ if (appointmentData.sales_id) {
   // (this is just a visual fallback — actual ID is still needed for API)
 }
 
-        // ✅ Referred By — appointment first, then customer.reference fallback
+        //   Referred By — appointment first, then customer.reference fallback
         if (
           appointmentData.referred_by &&
           appointmentData.referred_by.trim() !== ""
@@ -799,7 +799,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
       setSeverity("success");
       setOpenSnackbar(true);
       setHasChanges(false);
-      return true; // ✅ success
+      return true; //   success
     } catch (error) {
       console.error("Error saving sales info:", error);
       setSnackbarMessage("Error saving sales info");
@@ -1256,7 +1256,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
   };
 
   // Function to create procurement
-  // ✅ IMPROVED: Shortage-based PR creation
+  //   IMPROVED: Shortage-based PR creation
   // Calculates shortage = required_qty - available_qty
   // Creates PR ONLY for shortage amount
   // Auto-receives PR and updates inventory
@@ -1264,7 +1264,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
   const createProcurement = async (itemsToProcure) => {
     const token = Cookies.get("token");
     try {
-      // ✅ NEW: Deduplicate items by inventory_id and calculate shortage
+      //   NEW: Deduplicate items by inventory_id and calculate shortage
       // Group items by item_id and sum quantities
       const deduplicatedItems = {};
       for (const item of itemsToProcure) {
@@ -1275,7 +1275,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
       }
       let uniqueItems = Object.values(deduplicatedItems);
 
-      // ✅ NEW: Calculate shortage for each item
+      //   NEW: Calculate shortage for each item
       // Get current available quantities from inventory
       uniqueItems = uniqueItems.map((item) => {
         const inventoryItem = inventory.find(
@@ -2529,7 +2529,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
                       </a>
                     </Typography>
 
-                    {/* ✅ Fixed Address */}
+                    {/*   Fixed Address */}
                     <Typography
                       variant="body2"
                       sx={{
@@ -2544,7 +2544,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
                       {customer.contact.address.city}
                     </Typography>
 
-                    {/* ✅ State + Pincode in next line */}
+                    {/*   State + Pincode in next line */}
                     <Typography variant="body2">
                       {customer.contact.address.state}
                       {customer.contact.address.pinCode
@@ -2735,7 +2735,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
                     </Select>
                   </FormControl>
 
-                  {/* ✅ SALES MULTI SELECT */}
+                  {/*   SALES MULTI SELECT */}
                   <FormControl sx={{ width: 220 }} size="small">
                     <InputLabel>Sales</InputLabel>
                     <Select
@@ -2817,7 +2817,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
                         setHasChanges(true); // just update state
                       }}
                       onBlur={() => {
-                        saveCustomerRefName(customerRefName); // ✅ API called once
+                        saveCustomerRefName(customerRefName); //   API called once
                       }}
                     />
                   )}
@@ -3915,7 +3915,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
                     // 3. Update state
                     setUpdateButtonclicked(true);
 
-                    // 4. CALL PRINT FUNCTION ✅ (you missed this)
+                    // 4. CALL PRINT FUNCTION   (you missed this)
                     handleViewPDFInNewTab();
                   }}
                   sx={{

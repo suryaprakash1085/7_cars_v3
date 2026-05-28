@@ -115,7 +115,7 @@ export default function CustomerPaymentPage() {
 
         // console.log("All fetched:", fetchedPayments);
 
-        // ✅ DEFINE HERE (IMPORTANT)
+        //   DEFINE HERE (IMPORTANT)
         const filteredPayments = fetchedPayments.filter((p) => {
           return (
             p.vehicle_id === id &&
@@ -132,11 +132,11 @@ export default function CustomerPaymentPage() {
         filteredPayments.forEach((payment) => {
           let logs = [];
 
-          // ✅ Handle missing payment_log
+          //   Handle missing payment_log
           if (payment.payment_log) {
             logs = JSON.parse(payment.payment_log);
           } else if (payment.paid_amount > 0) {
-            // ✅ fallback log (VERY IMPORTANT FIX)
+            //   fallback log (VERY IMPORTANT FIX)
             logs = [
               {
                 paid_amount: payment.paid_amount,
@@ -159,7 +159,7 @@ export default function CustomerPaymentPage() {
           });
         });
 
-        // ✅ Sort latest first
+        //   Sort latest first
         allPaymentLogs.sort(
           (a, b) => new Date(b.date) - new Date(a.date)
         );
@@ -200,14 +200,14 @@ export default function CustomerPaymentPage() {
 
 
 
-  // ✅ Set the state AFTER declaration
+  //   Set the state AFTER declaration
   useEffect(() => {
     if (customer_id) {
       setSelectedCustomerId(customer_id);
     }
   }, [customer_id]);
 
-  // ✅ Fetch customer details whenever selectedCustomerId changes
+  //   Fetch customer details whenever selectedCustomerId changes
   useEffect(() => {
     if (!selectedCustomerId) return; // nothing to fetch
 

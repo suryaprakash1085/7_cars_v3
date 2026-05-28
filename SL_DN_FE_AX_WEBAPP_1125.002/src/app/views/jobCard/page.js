@@ -8,7 +8,7 @@ import {
   fetchEntries,
   handleSearch,
   deleteAppointment,
-  updateAppointment,
+  updateAppointment,companydetails
 } from "../../../../controllers/jobCardControllers";
 
 import DynamicListTable from "@/components/DynamicListTable";
@@ -39,7 +39,7 @@ export default function JobCard() {
   const [filteredEntries, 
     setFilteredEntries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [limit,setLimit] =useState(20);
+  const [limit,setLimit] =useState(null);
   const [offset,setOffset]=useState(0);
   const isFetching = useRef(false);
   const [hasMore, setHasMore] = useState(true);
@@ -77,15 +77,40 @@ export default function JobCard() {
       return formatDate(today);
     });
 
+useEffect(() => {
+  const fetchCompanyDetails = async () => {
+    try {
+      const details = await companydetails();
+
+      if (details?.company_details?.length > 0) {
+        const companyData = details.company_details[0];
+
+        const fetchLimit = Number(companyData.fetch_limit) || 20;
+
+        setLimit(fetchLimit);
+
+        console.log("FETCH LIMIT:", fetchLimit);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  fetchCompanyDetails();
+}, []);
 
 
 
 useEffect(() => {
+  if (limit === null) return;
+
   const storedToken = Cookies.get("token");
+
   setToken(storedToken);
   setEntries([]);
   setFilteredEntries([]);
   setOffset(0);
+
   fetchEntries(
     storedToken,
     setEntries,
@@ -98,11 +123,12 @@ useEffect(() => {
     endDate,
     "invoiced",
     limit,
-    offset,
+    0,
     setOffset,
-     setHasMore
+    setHasMore
   );
-}, [startDate, endDate]);
+}, [startDate, endDate, limit]);
+
 
   const columns = [
     {

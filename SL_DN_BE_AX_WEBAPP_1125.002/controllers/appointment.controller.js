@@ -177,7 +177,7 @@ export async function getAllAppointments(req, res) {
       .where("id_type", "countersales")
       .orWhere("id_type", "Appointment");
 
-    // ✅ STEP 1: Get paginated appointment_ids only (no joins)
+    //   STEP 1: Get paginated appointment_ids only (no joins)
     const baseQuery = knex("appointments").where(function (builder) {
       if (companyCode) builder.where("appointments.company_code", companyCode);
 
@@ -204,15 +204,15 @@ export async function getAllAppointments(req, res) {
       }
     });
 
-    // ✅ Get total count of unique appointments
+    //   Get total count of unique appointments
     const [{ total }] = await baseQuery.clone().count("appointment_id as total");
 
-    // ✅ Get only the IDs for this page
+    //   Get only the IDs for this page
     const paginatedIds = await baseQuery
       .clone()
       .select("appointment_id")
       .orderBy("appointment_date", "desc")
-      .limit(limit)     // ✅ Now limit applies to appointments, not rows
+      .limit(limit)     //   Now limit applies to appointments, not rows
       .offset(offset);
 
     const appointmentIds = paginatedIds.map((r) => r.appointment_id);
@@ -221,7 +221,7 @@ export async function getAllAppointments(req, res) {
       return res.status(200).json({ total: 0, limit, offset, data: [] });
     }
 
-    // ✅ STEP 2: Fetch full data only for those appointment IDs
+    //   STEP 2: Fetch full data only for those appointment IDs
     const appointments = await knex("appointments")
       .select(
         "appointments.appointment_id",
@@ -282,7 +282,7 @@ export async function getAllAppointments(req, res) {
       .leftJoin("items_required", "services_actual.service_id", "items_required.service_id")
       .leftJoin("appointment_to_invoice", "appointments.appointment_id", "appointment_to_invoice.appointment_id")
       .leftJoin("vehicles", "appointments.vehicle_id", "vehicles.vehicle_id")
-      .whereIn("appointments.appointment_id", appointmentIds)  // ✅ Only our page
+      .whereIn("appointments.appointment_id", appointmentIds)  //   Only our page
       .orderBy("appointments.appointment_date", "desc");
 
     // Group rows into appointments (same as before)
@@ -371,7 +371,7 @@ export async function getAllAppointments(req, res) {
     });
 
     res.status(200).json({
-      total: parseInt(total),   // ✅ Real total count
+      total: parseInt(total),   //   Real total count
       limit,
       offset,
       data: formattedAppointments,
@@ -951,7 +951,7 @@ export async function getAppointmentById(req, res) {
     const row0 = rows[0];
 
     //   SAFE DATE FIX (IMPORTANT)
-    // ✅ Better safeDate - handles MySQL date formats
+    //   Better safeDate - handles MySQL date formats
     const safeDate = (d) => {
       if (!d) return null;
 
@@ -1319,7 +1319,7 @@ export async function updateAppointmentStatus(req, res) {
   res.status(200).send({ result });
 }
 
-// ✅ IMPROVED: Helper function to check if a Consumed transaction already exists for a service/item
+//   IMPROVED: Helper function to check if a Consumed transaction already exists for a service/item
 // Returns the existing transaction with quantity if found
 async function hasExistingConsumedTransaction(service_id, item_id) {
   const existing = await knex("transactions")
@@ -1342,7 +1342,7 @@ export async function addServicesToAppointment(req, res) {
       return res.status(400).json({ error: "No services provided" });
     }
 
-    // ✅ VALIDATION: Ensure all services have at least one item_required
+    //   VALIDATION: Ensure all services have at least one item_required
     const servicesWithoutItems = services.filter(
       (service) =>
         !service.items_required || service.items_required.length === 0,
@@ -1626,7 +1626,7 @@ export async function addServicesToAppointment(req, res) {
               await knex("transactions").insert(transactionData);
             } else if (difference > 0) {
               // Item quantity increased - consume from inventory
-              // ✅ ENHANCED: Handle complete transaction sequence for quantity increase
+              //   ENHANCED: Handle complete transaction sequence for quantity increase
               const availableQty = currentInventory.quantity;
               const requiredQty = difference;
               const consumeQty = Math.min(availableQty, requiredQty);
@@ -1746,7 +1746,7 @@ export async function addServicesToAppointment(req, res) {
                 .first();
 
               if (currentInventory) {
-                // ✅ ENHANCED: Handle complete transaction sequence
+                //   ENHANCED: Handle complete transaction sequence
                 // 1. Consume available stock
                 // 2. Create Purchase transaction for shortage
                 // 3. Create Received transaction for shortage
@@ -2332,7 +2332,7 @@ export async function getAppointmentsByDateRange(req, res) {
     console.log("START:", start_date);
     console.log("END:", end_date);
 
-    // ✅ Get prefixes
+    //   Get prefixes
     const prefixRows = await knex("number_range").whereIn("id_type", [
       "countersales",
       "Appointment",
@@ -2340,7 +2340,7 @@ export async function getAppointmentsByDateRange(req, res) {
 
     const prefixes = prefixRows.map((p) => p.prefix);
 
-    // ✅ MAIN QUERY
+    //   MAIN QUERY
     const appointments = await knex("appointments")
       .select(
         "appointments.appointment_id",
@@ -2407,7 +2407,7 @@ export async function getAppointmentsByDateRange(req, res) {
       )
       .leftJoin("vehicles", "appointments.vehicle_id", "vehicles.vehicle_id")
 
-      // ✅ PREFIX FILTER (FIXED)
+      //   PREFIX FILTER (FIXED)
       .where((builder) => {
         prefixes.forEach((p, i) => {
           if (i === 0) {
@@ -2418,7 +2418,7 @@ export async function getAppointmentsByDateRange(req, res) {
         });
       })
 
-      // ✅ DATE FILTER (WORKS FOR ALL FORMATS)
+      //   DATE FILTER (WORKS FOR ALL FORMATS)
       .andWhereRaw(
         "DATE(appointments.appointment_date) >= ? AND DATE(appointments.appointment_date) <= ?",
         [start_date, end_date],
@@ -2428,7 +2428,7 @@ export async function getAppointmentsByDateRange(req, res) {
 
     console.log("SQL:", appointments.toString());
 
-    // ✅ FORMAT RESPONSE
+    //   FORMAT RESPONSE
     const formattedAppointments = [];
     const map = {};
 
@@ -4647,7 +4647,7 @@ export async function updateInvoiceAmount(req, res) {
 
     const today = req.tzHelpers ? req.tzHelpers.format(new Date(), "YYYY-MM-DD") : new Date().toISOString().split("T")[0];
 
-    // ✅ FIXED (normalize)
+    //   FIXED (normalize)
     const finalPaymentMode = (paymentMode || payment_method || "").toLowerCase();
 
     /**
@@ -4767,7 +4767,7 @@ export async function updateInvoiceAmount(req, res) {
       invoice_id: invoiceID,
       appointment_id,
       invoice_date: updatedAppointment.invoice_date,
-      paid_amount: updatedAppointment.paid_amount, // ✅ added for confirmation
+      paid_amount: updatedAppointment.paid_amount, //   added for confirmation
     });
   } catch (error) {
     console.error("Error updating invoice amount:", error);
@@ -4980,7 +4980,7 @@ export async function updateAppointmentStatusById(req, res) {
 
       if (!serviceActual) return;
 
-      // ✅ INSPECTION → only service_status completed
+      //   INSPECTION → only service_status completed
       if (status === "inspection") {
         await trx("services_actual").where({ appointment_id }).update({
           service_status: "Completed",
@@ -4988,7 +4988,7 @@ export async function updateAppointmentStatusById(req, res) {
         });
       }
 
-      // ✅ INVOICE → both completed
+      //   INVOICE → both completed
       if (status === "invoice") {
         await trx("services_actual").where({ appointment_id }).update({
           inspection_status: "Completed",
@@ -5544,7 +5544,7 @@ export async function updateSalesAndReferralInfo(req, res) {
       return res.status(400).json({ message: "Appointment ID is required" });
     }
 
-    // ✅ Validation - sales_id can be single value or array
+    //   Validation - sales_id can be single value or array
     if (!sales_id) {
       return res.status(400).json({ message: "Sales ID is required" });
     }
@@ -5589,7 +5589,7 @@ export async function updateSalesAndReferralInfo(req, res) {
       await logChange(token, "appointments", "UPDATE", appointment_id, changes);
     }
 
-    // ✅ DB update - store sales_id as JSON array
+    //   DB update - store sales_id as JSON array
     await knex("appointments")
       .where({ appointment_id: appointment_id })
       .update({

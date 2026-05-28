@@ -97,7 +97,7 @@ export default function InventoryActivityTabs() {
         sx={{
           width: "100%",
           height: "89vh",
-          // mt: "70px", // ✅ prevents navbar overlap
+          // mt: "70px", //   prevents navbar overlap
         }}
       >
         {/* 🔹 Tabs */}
@@ -118,7 +118,7 @@ export default function InventoryActivityTabs() {
   {tilesToDisplay.map((tile, index) => (
     <Tab
       key={index}
-      label={tile.name}           // ✅ This displays the name
+      label={tile.name}           //   This displays the name
       icon={
         <img
           src={tile.icon}
@@ -131,7 +131,7 @@ export default function InventoryActivityTabs() {
           }}
         />
       }
-      iconPosition="top"          // ✅ icon above the text
+      iconPosition="top"          //   icon above the text
     />
   ))}
 </Tabs>

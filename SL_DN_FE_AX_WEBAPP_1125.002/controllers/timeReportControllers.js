@@ -138,7 +138,7 @@ const fetchUsers = async (setUsersData) => {
       throw new Error("Network response was not ok");
     }
     const usersData = await response.json();
-        console.log("✅ fetchUsers RESPONSE:", usersData); // <-- check this
+        console.log("  fetchUsers RESPONSE:", usersData); // <-- check this
 
     setUsersData(usersData);
   } catch (error) {
@@ -161,7 +161,7 @@ const fetchTimeEntries = async (setTimeEntriesData) => {
       throw new Error("Network response was not ok");
     }
     const timeEntriesData = await response.json();
-     console.log("✅ fetchTimeEntries RESPONSE:", timeEntriesData);
+     console.log("  fetchTimeEntries RESPONSE:", timeEntriesData);
     const formattedTimeEntriesData = timeEntriesData.map((entry) => ({
       ...entry,
       date: new Date(entry.date).toLocaleDateString("en-GB", {

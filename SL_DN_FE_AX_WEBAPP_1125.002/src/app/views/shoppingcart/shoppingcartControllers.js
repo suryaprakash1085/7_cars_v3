@@ -104,4 +104,16 @@ export const scrollToTopButtonDisplay = (event, setShowFab) => {
   setShowFab(scrollTop > 10);
 };
 
+
+export const companydetails = async () => {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ss`);
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error("Error fetching company details:", err);
+    throw err;
+  }
+};
+
 export { fetchData, createCounterSale, deleteCTInvoice };

@@ -382,7 +382,7 @@ const [endDate, setEndDate] = useState(formatDateLocal(today));
           });
         });
 
-        // ✅ push unique rows
+        //   push unique rows
         if (uniqueRows.size > 0) {
           uniqueRows.forEach((row) => detailedData.push(row));
         } else {
@@ -418,7 +418,7 @@ const [endDate, setEndDate] = useState(formatDateLocal(today));
 
       const ws = XLSX.utils.aoa_to_sheet(detailedData);
 
-      // ✅ Formatting
+      //   Formatting
       const range = XLSX.utils.decode_range(ws["!ref"]);
       for (let r = range.s.r; r <= range.e.r; r++) {
         for (let c = range.s.c; c <= range.e.c; c++) {
@@ -437,7 +437,7 @@ const [endDate, setEndDate] = useState(formatDateLocal(today));
         }
       }
 
-      // ✅ Column widths
+      //   Column widths
       ws["!cols"] = [
         { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
         { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 },

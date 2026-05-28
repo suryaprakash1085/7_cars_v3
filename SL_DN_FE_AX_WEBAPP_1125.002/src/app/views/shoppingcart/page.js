@@ -23,7 +23,7 @@ import {
   createCounterSale,
   deleteCTInvoice,
   handleScrollToTop,
-  scrollToTopButtonDisplay,
+  scrollToTopButtonDisplay,companydetails
 } from "./shoppingcartControllers.js";
 import AddCustomer from "@/components/addcust";
 import OldCustomerModal from "@/components/OldCustomerModal";
@@ -35,7 +35,6 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const limit = 20;
 
 const CustomerTable = () => {
   const [token, setToken] = useState();
@@ -59,7 +58,7 @@ const CustomerTable = () => {
   });
   const [endDate, setEndDate] = useState(() => formatDate(new Date()));
 
-  // ✅ Refs for scroll pagination
+  //   Refs for scroll pagination
   const offsetRef = useRef(0);
   const hasMoreRef = useRef(true);
   const loadingRef = useRef(false);
@@ -68,11 +67,30 @@ const CustomerTable = () => {
   const startDateRef = useRef("");
   const endDateRef = useRef("");
 
+  const [limit, setLimit] = useState(null);
+
+
+  useEffect(() => {
+  const fetchCompanyDetails = async () => {
+    try {
+      const details = await companydetails();
+      if (details?.company_details?.length > 0) {
+        const fetchLimit = Number(details.company_details[0].fetch_limit) || 20;
+        setLimit(fetchLimit);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  fetchCompanyDetails();
+}, []);
+
   useEffect(() => { startDateRef.current = startDate; }, [startDate]);
   useEffect(() => { endDateRef.current = endDate; }, [endDate]);
 
-  // ✅ Initial load / date change
+  //   Initial load / date change
   useEffect(() => {
+    if (limit === null) return; 
     const storedToken = Cookies.get("token");
     setToken(storedToken);
     tokenRef.current = storedToken;
@@ -95,9 +113,9 @@ const CustomerTable = () => {
         }
         loadingRef.current = false;
       });
-  }, [startDate, endDate]);
+  }, [startDate, endDate, limit]);
 
-  // ✅ Filter rows by date
+  //   Filter rows by date
   useEffect(() => {
     const filteredData = tableRows
       .filter((row) => {
@@ -115,7 +133,7 @@ const CustomerTable = () => {
     setFilteredRows(filteredData);
   }, [startDate, endDate, tableRows]);
 
-  // ✅ Scroll handler
+  //   Scroll handler
   const handleScroll = (event) => {
     scrollToTopButtonDisplay(event, setShowFab);
 
@@ -125,7 +143,7 @@ const CustomerTable = () => {
     if (loadingRef.current) return;
 
     if (scrollHeight - scrollTop <= clientHeight + 200) {
-      console.log("✅ API calling offset:", offsetRef.current);
+      console.log("  API calling offset:", offsetRef.current);
       loadingRef.current = true;
 
       fetchData(
@@ -219,7 +237,7 @@ const CustomerTable = () => {
         </Box>
       </Box>
 
-      {/* ✅ Scrollable table with onScroll */}
+      {/*   Scrollable table with onScroll */}
       <TableContainer
         component={Paper}
         id="scrollable-table"
@@ -275,7 +293,7 @@ const CustomerTable = () => {
         </Table>
       </TableContainer>
 
-      {/* ✅ Scroll to top FAB */}
+      {/*   Scroll to top FAB */}
       {showFab && (
         <Fab
           size="small"

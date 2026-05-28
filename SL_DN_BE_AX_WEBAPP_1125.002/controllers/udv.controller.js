@@ -61,7 +61,7 @@ export async function uploadUDVFile(req, res) {
           rowText.includes("city")
         ) {
           headerRowIndex = i;
-          console.log(`✅ Found header row at index ${i}`);
+          console.log(`  Found header row at index ${i}`);
           console.log(`   Header row content:`, row);
           break;
         }
@@ -102,7 +102,7 @@ export async function uploadUDVFile(req, res) {
       }
     }
 
-    console.log(`✅ Extracted ${rawData.length} data rows`);
+    console.log(`  Extracted ${rawData.length} data rows`);
     if (rawData.length > 0) {
       console.log(`📄 First data row:`, JSON.stringify(rawData[0], null, 2));
     }
@@ -323,9 +323,9 @@ async function processLeadsUpload(rawData, fileName, token) {
         customerData.leads_owner = leads_owner;
       }
 
-      console.log(`✅ Inserting customer: ${JSON.stringify(customerData)}`);
+      console.log(`  Inserting customer: ${JSON.stringify(customerData)}`);
       await customerModel.createCustomer(customerData);
-      console.log(`✅ Customer inserted successfully: ${customerId}`);
+      console.log(`  Customer inserted successfully: ${customerId}`);
 
       // Log change to history
       if (token) {
@@ -401,7 +401,7 @@ async function processLeadsUpload(rawData, fileName, token) {
         }
       }
 
-      console.log(`✅ Successfully tracked ${insertedCount}/${trackingRecords.length} records for leads upload`);
+      console.log(`  Successfully tracked ${insertedCount}/${trackingRecords.length} records for leads upload`);
     } catch (trackError) {
       console.error("❌ Error in tracking batch process:", trackError.message);
       // Don't throw - we still want to return success with whatever was inserted
@@ -653,7 +653,7 @@ async function processInventoryUpload(rawData, fileName, token) {
         }
       }
 
-      console.log(`✅ Successfully tracked ${insertedCount}/${trackingRecords.length} records for inventory upload`);
+      console.log(`  Successfully tracked ${insertedCount}/${trackingRecords.length} records for inventory upload`);
     } catch (trackError) {
       console.error("❌ Error in tracking batch process:", trackError.message);
       // Don't throw - we still want to return success with whatever was inserted
@@ -769,7 +769,7 @@ export async function getUDVUploadHistory(req, res) {
       .limit(parseInt(limit))
       .offset(parseInt(offset));
 
-    console.log(`✅ Found ${uploads.length} uploads`);
+    console.log(`  Found ${uploads.length} uploads`);
 
     // Fetch detailed records for each upload
     const uploadsWithDetails = await Promise.all(

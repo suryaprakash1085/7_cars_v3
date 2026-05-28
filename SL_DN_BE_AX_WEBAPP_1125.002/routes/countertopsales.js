@@ -1394,7 +1394,7 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ error: "Customer not found" });
     }
 
-    console.log("✅ Customer Found:", customerExists);
+    console.log("  Customer Found:", customerExists);
 
     await knex("customers").where("customer_id", id).update({
       customer_name,
@@ -1414,7 +1414,7 @@ router.put("/:id", async (req, res) => {
       invoice_amount,
     });
 
-    console.log("✅ Update Successful for ID:", id);
+    console.log("  Update Successful for ID:", id);
     res
       .status(200)
       .json({ message: "Customer and Appointment updated successfully" });

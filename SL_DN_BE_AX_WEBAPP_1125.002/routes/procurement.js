@@ -89,7 +89,7 @@ router.post("/", async (req, res) => {
 
       // If status is "Completed", also create Received transactions and update inventory
       if (status === "Completed") {
-        // ✅ FIXED: Check for Received transactions PER ITEM to prevent duplicates
+        //   FIXED: Check for Received transactions PER ITEM to prevent duplicates
         // This prevents creating multiple Received txns for the same item in the same PR
         for (let item of items) {
           // Check if a Received transaction already exists for this specific item and PR
@@ -357,7 +357,7 @@ router.post("/received_qty", async (req, res) => {
       //   description: "Received the item from the supplier",
       //   inventory_id: items[0].item_id,
       // };
-      // ✅ FIXED: Check for Received transactions PER ITEM to prevent duplicates
+      //   FIXED: Check for Received transactions PER ITEM to prevent duplicates
       for (let item of items) {
         // Check if Received transaction already exists for this specific item and PR
         const existingReceivedTxn = await knex("transactions")
@@ -1360,7 +1360,7 @@ router.get("/supplier/prDetails/:supplier_id", async (req, res) => {
 });
 
 // Create or update a procurement for SRPR type
-// ✅ SRPR Route: Service-based Purchase Request with shortage-based PR creation
+//   SRPR Route: Service-based Purchase Request with shortage-based PR creation
 // Supports auto-receipt when status = "Completed"
 // Each item can include:
 //   - qty: required quantity for consumption
@@ -1455,7 +1455,7 @@ router.post("/srpr", async (req, res) => {
             });
 
           // Log transaction for existing item update
-          // ✅ FIX: Check if Purchase transaction already exists to prevent duplicates
+          //   FIX: Check if Purchase transaction already exists to prevent duplicates
           if (item.item_id && prQty > 0) {
             const existingPurchaseTxn = await knex("transactions")
               .where("inventory_id", item.item_id)
@@ -1490,7 +1490,7 @@ router.post("/srpr", async (req, res) => {
           });
 
           // Log transaction for new item in existing PR
-          // ✅ FIX: Check if Purchase transaction already exists to prevent duplicates
+          //   FIX: Check if Purchase transaction already exists to prevent duplicates
           if (item.item_id && prQty > 0) {
             const existingPurchaseTxn = await knex("transactions")
               .where("inventory_id", item.item_id)
@@ -1563,7 +1563,7 @@ router.post("/srpr", async (req, res) => {
                 .update({ quantity: newQuantity });
             }
 
-            // ✅ FIX: Auto-consume received qty to fulfill remaining requirement
+            //   FIX: Auto-consume received qty to fulfill remaining requirement
             // This ensures the flow: Consumed available → Purchase shortage → Received → Consumed received
             const consumedTxn = await knex("transactions")
               .where("service_id", service_id)
@@ -1634,7 +1634,7 @@ router.post("/srpr", async (req, res) => {
         const prQty = item.shortage_qty !== undefined ? item.shortage_qty : item.qty;
 
         // Log transaction for procurement - log PR qty, not required qty
-        // ✅ FIX: Check if Purchase transaction already exists to prevent duplicates
+        //   FIX: Check if Purchase transaction already exists to prevent duplicates
         if (item.item_id && prQty > 0) {
           const existingPurchaseTxn = await knex("transactions")
             .where("inventory_id", item.item_id)
@@ -1696,7 +1696,7 @@ router.post("/srpr", async (req, res) => {
           const prQty = item.shortage_qty !== undefined ? item.shortage_qty : item.qty;
 
           if (item.item_id && prQty > 0) {
-            // ✅ FIX: Check if Received transaction already exists to prevent duplicates
+            //   FIX: Check if Received transaction already exists to prevent duplicates
             const existingReceivedTxn = await knex("transactions")
               .where("inventory_id", item.item_id)
               .andWhere("transaction_type", "Received")
@@ -1726,7 +1726,7 @@ router.post("/srpr", async (req, res) => {
                   .update({ quantity: newQuantity });
               }
 
-              // ✅ FIX: Auto-consume received qty to fulfill remaining requirement
+              //   FIX: Auto-consume received qty to fulfill remaining requirement
               // This ensures the flow: Consumed available → Purchase shortage → Received → Consumed received
               const consumedTxn = await knex("transactions")
                 .where("service_id", service_id)

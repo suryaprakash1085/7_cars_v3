@@ -831,7 +831,7 @@ console.log('ServiceAnalytics received dates:', { startDate, endDate });
         { key: 'appointment_date', label: 'Date', render: (value) => fmtDate(value) }
     ];
 
-    // ✅ KEY FIX: derive bgImage from companyDetails prop
+    //   KEY FIX: derive bgImage from companyDetails prop
     const bgImage = companyDetails?.background_image || null;
 // console.log("ServiceAnalytics Total Appointments:", appointmentsList.length);
 // console.log("ServiceAnalytics startDate:", startDate);
@@ -888,7 +888,7 @@ console.log("All unique statuses:", [...new Set(appointmentsList.map(apt => apt?
                             subtitle="Successful completions"
                             trend="up"
                             trendValue="18.5%"
-                            icon="✅"
+                            icon=" "
                             color="success"
                             data={appointmentsList.filter(apt => apt?.status?.toLowerCase().includes('invoiced'))}
                             modalColumns={appointmentColumns}
@@ -1070,7 +1070,7 @@ useEffect(() => {
     const fetchCustomers = async () => {
         setLoading(true);
         try {
-            // ✅ report page — no limit, with date filter
+            //   report page — no limit, with date filter
             const url = startDate && endDate
                 ? `/customer/?limit=100000&startDate=${startDate}&endDate=${endDate}`
                 : `/customer/?limit=100000`;
@@ -1085,7 +1085,7 @@ useEffect(() => {
         }
     };
     fetchCustomers();
-}, [startDate, endDate]);// ✅ API runs when startDate or endDate changes
+}, [startDate, endDate]);//   API runs when startDate or endDate changes
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" height={400}>
@@ -1400,7 +1400,7 @@ function FinancialDashboard({ startDate, endDate, companyDetails }) {
     const transactionUrl = `/finance/transactions?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
     const inventoryUrl = `/inventory?limit=100000&startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
 
-    // ✅ FIX: use URL as dependency (IMPORTANT)
+    //   FIX: use URL as dependency (IMPORTANT)
     const { data: transactionsResponse, loading: transactionsLoading } =
         useApiData(transactionUrl, [transactionUrl]);
 
@@ -1686,13 +1686,13 @@ function FinancialDashboard({ startDate, endDate, companyDetails }) {
 function OperationsCenter({ companyDetails, startDate, endDate }) {
     const bgImage = companyDetails?.background_image || null;
 
-    // ✅ date formatter
+    //   date formatter
     const formatDate = (date) => {
         if (!date) return "";
         return new Date(date).toISOString().split("T")[0];
     };
 
-    // ✅ dynamic URLs (ONLY change here)
+    //   dynamic URLs (ONLY change here)
     const customerUrl =
         startDate && endDate
             ? `/customer?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`
@@ -1703,7 +1703,7 @@ function OperationsCenter({ companyDetails, startDate, endDate }) {
             ? `/appointment?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`
             : `/appointment/`;
 
-    // ✅ API calls (auto refetch on date change)
+    //   API calls (auto refetch on date change)
     const { data: customers, loading: customersLoading } =
         useApiData(customerUrl, [startDate, endDate]);
 
@@ -2010,7 +2010,7 @@ function OperationsCenter({ companyDetails, startDate, endDate }) {
 // Workforce Analytics Section
 function WorkforceAnalytics({ startDate, endDate, companyDetails }) {
 
-    // ✅ format date to YYYY-MM-DD
+    //   format date to YYYY-MM-DD
     const formatDate = (date) => {
         if (!date) return "";
         const d = new Date(date);
@@ -2023,19 +2023,19 @@ function WorkforceAnalytics({ startDate, endDate, companyDetails }) {
     const formattedStartDate = formatDate(startDate);
     const formattedEndDate = formatDate(endDate);
 
-    // ✅ dynamic API url
+    //   dynamic API url
     const appointmentApi =
         formattedStartDate && formattedEndDate
             ? `/appointment/get_appointments_by_date/${formattedStartDate}/${formattedEndDate}`
             : `/appointment`;
 
-    // ✅ API calls
+    //   API calls
     const { data: users, loading: usersLoading } = useApiData('/auth/users');
 
     const { data: appointments, loading: appointmentsLoading } =
         useApiData(appointmentApi, [formattedStartDate, formattedEndDate]);
 
-    // ✅ loading state
+    //   loading state
     if (usersLoading || appointmentsLoading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" height={400}>
@@ -2044,7 +2044,7 @@ function WorkforceAnalytics({ startDate, endDate, companyDetails }) {
         );
     }
 
-    // ✅ safe arrays
+    //   safe arrays
     const usersList = Array.isArray(users) ? users : [];
     const appointmentsList = Array.isArray(appointments) ? appointments : [];
 
@@ -2091,7 +2091,7 @@ function WorkforceAnalytics({ startDate, endDate, companyDetails }) {
         { key: 'efficiency', label: 'Efficiency %', render: (value) => `${value.toFixed(1)}%` }
     ];
 
-    // ✅ ONLY ADD THIS (BACKGROUND IMAGE)
+    //   ONLY ADD THIS (BACKGROUND IMAGE)
     const bgImage = companyDetails?.background_image || null;
 
 
@@ -2109,7 +2109,7 @@ function WorkforceAnalytics({ startDate, endDate, companyDetails }) {
                 width: "100%",
             }}
         >
-            {/* ✅ YOUR ORIGINAL DESIGN STARTS — UNCHANGED */}
+            {/*   YOUR ORIGINAL DESIGN STARTS — UNCHANGED */}
             <Box sx={{ p: 3 }}>
 
                 {/* Mechanic KPIs */}
@@ -3159,10 +3159,10 @@ function InventoryIntelligence({ startDate, endDate, companyDetails }) {
 function BusinessInsights({ startDate, endDate, companyDetails }) {
     console.log("BusinessInsights Props:", { startDate, endDate, companyDetails });
 
-    // ✅ Date formatter (FIX)
+    //   Date formatter (FIX)
     const formatDate = (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "");
 
-    // ✅ Apply date filter like FinancialDashboard
+    //   Apply date filter like FinancialDashboard
     const customerUrl = `/customer?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
     const transactionUrl = `/finance/transactions?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
     const appointmentUrl = `/appointment?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
@@ -3226,7 +3226,7 @@ const filteredAppointments = filterByDate(
     appointmentsList,
     "appointment_date" // 👉 if not working, change to "created_at"
 );
-// ✅ FALLBACK IF FILTER RETURNS EMPTY
+//   FALLBACK IF FILTER RETURNS EMPTY
 const finalCustomers =
     filteredCustomers.length > 0 ? filteredCustomers : customersList;
 
@@ -3247,7 +3247,7 @@ const finalAppointments =
     //         return false;
     //     }
     // }).length;
-   // ✅ CALCULATIONS (FIXED)
+   //   CALCULATIONS (FIXED)
 
 const customerGrowth = finalCustomers.length;
 
@@ -3282,7 +3282,7 @@ const completionRate =
           ).length / finalAppointments.length) * 100
         : 0;
 
-// ✅ FORECAST (NOW WORKS)
+//   FORECAST (NOW WORKS)
 const revenueProjection = totalRevenue * 1.15;
 const growthForecast = Math.round(customerGrowth * 1.2);
 const marketOpportunity =
@@ -3296,7 +3296,7 @@ const marketOpportunity =
 //   console.log("Completion Rate:", completionRate.toFixed(2) + "%");
 //   console.log("-------------------------------");
 
-    // ✅ YOUR UI BELOW — NO CHANGES
+    //   YOUR UI BELOW — NO CHANGES
     return (
         <Box
             sx={{
@@ -3350,7 +3350,7 @@ const marketOpportunity =
                             title="Completion Rate"
                             value={`${completionRate.toFixed(1)}%`}
                             subtitle="Service efficiency"
-                            icon="✅"
+                            icon=" "
                             color="purple"
                         />
                     </Grid>

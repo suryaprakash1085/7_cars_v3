@@ -137,7 +137,7 @@ console.log("appointment data_appoinments", formattedDate_appoinment_date);
     const customerData = await customerResponse.json();
     const inventoryData = await inventoryResponse.json();
 
-    // ✅ FIXED: was commented out before — this is why nothing rendered
+    //   FIXED: was commented out before — this is why nothing rendered
     setCustomer(customerData);
 
 

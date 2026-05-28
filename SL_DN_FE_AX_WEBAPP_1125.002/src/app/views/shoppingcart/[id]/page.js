@@ -462,7 +462,7 @@ setVehicleModel(matchedVehicle?.model || "");
 
   const { grandTotal, totalTax, overallTotal } = calculateTotals();
 
-  // ✅ FIXED: accepts passedInvoiceDate to avoid React state timing issues
+  //   FIXED: accepts passedInvoiceDate to avoid React state timing issues
   const generatePDF = async (mode = "download", passedInvoiceDate = null) => {
     if (!estimateItems.some((item) => item.price > 0)) {
       showSnackbarAlert(
@@ -493,7 +493,7 @@ setVehicleModel(matchedVehicle?.model || "");
       if (checkData.invoice_id) {
         invoice_id = checkData.invoice_id;
         resolved_invoice_date = checkData.invoice_date;
-        setinvoice_date(checkData.invoice_date); // ✅ sync state
+        setinvoice_date(checkData.invoice_date); //   sync state
       } else {
         const generateResponse = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/appointment/generateinvoice/${appointmentId}`,
@@ -519,7 +519,7 @@ setVehicleModel(matchedVehicle?.model || "");
      
       }
 
-      // ✅ prefer passedInvoiceDate (from validateAndPostService) over locally resolved one
+      //   prefer passedInvoiceDate (from validateAndPostService) over locally resolved one
       const finalInvoiceDate = passedInvoiceDate || resolved_invoice_date || invoice_date;
 
       await generatePDFInvoice({
@@ -536,7 +536,7 @@ setVehicleModel(matchedVehicle?.model || "");
         pdfFooterImage,
         pdfLogo,
         invoiceId: invoice_id,
-        invoiceDate: finalInvoiceDate, // ✅ FIXED: no longer "sample"
+        invoiceDate: finalInvoiceDate, //   FIXED: no longer "sample"
         companyDetails,
         upi: upiDetails.pa,
         openInNewTab: mode === "newTab",
@@ -563,7 +563,7 @@ setVehicleModel(matchedVehicle?.model || "");
 
   const handleViewPDFInNewTab = async (passedInvoiceDate = null) => {
     handlePrintMenuClose();
-    await generatePDF("newTab", passedInvoiceDate); // ✅ forward the date
+    await generatePDF("newTab", passedInvoiceDate); //   forward the date
   };
 
   const addEstimateItem = () => {
@@ -766,7 +766,7 @@ setVehicleModel(matchedVehicle?.model || "");
     }
   };
 
-  // ✅ FIXED: now returns captured_invoice_date so callers can pass it directly to generatePDF
+  //   FIXED: now returns captured_invoice_date so callers can pass it directly to generatePDF
   const validateAndPostService = async (
     serviceType,
     appointmentDataLog,
@@ -814,7 +814,7 @@ setVehicleModel(matchedVehicle?.model || "");
         appointmentDataLog.services_actual.length > 0 ? "approved" : "released";
     }
 
-    // ✅ captures invoice_date to return at the end
+    //   captures invoice_date to return at the end
     let captured_invoice_date = null;
 
     try {
@@ -833,8 +833,8 @@ setVehicleModel(matchedVehicle?.model || "");
 
       if (checkData.invoice_id) {
         appointmentDataLog.invoice_id = checkData.invoice_id;
-        captured_invoice_date = checkData.invoice_date; // ✅ capture it
-        setinvoice_date(checkData.invoice_date);         // ✅ sync state
+        captured_invoice_date = checkData.invoice_date; //   capture it
+        setinvoice_date(checkData.invoice_date);         //   sync state
       } else {
         const generateResponse = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/appointment/generateinvoice/${appointmentId}`,
@@ -853,8 +853,8 @@ setVehicleModel(matchedVehicle?.model || "");
 
         const generateData = await generateResponse.json();
         appointmentDataLog.invoice_id = generateData.invoice_id;
-        captured_invoice_date = generateData.invoice_date; // ✅ capture it
-        setinvoice_date(generateData.invoice_date);         // ✅ sync state
+        captured_invoice_date = generateData.invoice_date; //   capture it
+        setinvoice_date(generateData.invoice_date);         //   sync state
       }
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -957,7 +957,7 @@ setVehicleModel(matchedVehicle?.model || "");
       throw error;
     }
 
-    // ✅ return captured_invoice_date so the caller can pass it directly to generatePDF
+    //   return captured_invoice_date so the caller can pass it directly to generatePDF
     return captured_invoice_date;
   };
 
@@ -1646,7 +1646,7 @@ setVehicleModel(matchedVehicle?.model || "");
                   }}
                 >
                   <Box display="flex" gap={0.5}>
-                    {/* ✅ FIXED: Print button now passes invoice_date directly */}
+                    {/*   FIXED: Print button now passes invoice_date directly */}
                     <Button
                       variant="contained"
                       color="primary"
@@ -1658,7 +1658,7 @@ setVehicleModel(matchedVehicle?.model || "");
                             appointmentDataLog,
                             "save",
                           );
-                          await generatePDF("newTab", inv_date); // ✅ pass date directly
+                          await generatePDF("newTab", inv_date); //   pass date directly
                         } catch (error) {
                           console.error(error);
                         }

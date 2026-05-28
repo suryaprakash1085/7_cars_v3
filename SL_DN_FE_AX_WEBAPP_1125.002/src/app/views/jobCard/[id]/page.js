@@ -875,7 +875,7 @@ const addEstimateItem = () => {
   const createProcurement = async (itemsToProcure) => {
     const token = Cookies.get("token");
     try {
-      // ✅ IMPROVED: Shortage-based PR creation
+      //   IMPROVED: Shortage-based PR creation
       // Deduplicate items and calculate shortage
       const deduplicatedItems = {};
       for (const item of itemsToProcure) {

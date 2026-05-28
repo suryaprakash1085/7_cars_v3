@@ -152,7 +152,7 @@ const CustomerDetail = () => {
     setIsChatOpen(!isChatOpen);
   };
 
-  const [statusChange, setStatusChange] = useState(""); // ✅ ADD HERE
+  const [statusChange, setStatusChange] = useState(""); //   ADD HERE
   const [newSpareInputs, setNewSpareInputs] = useState({});
   const [editingSpare, setEditingSpare] = useState({
     itemIndex: null,
@@ -593,7 +593,7 @@ useEffect(() => {
     0
   );
 
-  // ✅ Build blob and open in NEW TAB
+  //   Build blob and open in NEW TAB
   const { default: generatePDFBlob } = await import(
     "../../../../components/PDFGenerator_estimate"
   );
@@ -609,14 +609,14 @@ useEffect(() => {
     PdfHeaderImage,
     pdfFooterImage,
     pdfLogo,
-    companyDetails,   // ✅ fixed
+    companyDetails,   //   fixed
     printDate,
     printedBy,
     paymentMethod: "",
   });
 
   const url = URL.createObjectURL(pdfBlob);
-  window.open(url, "_blank"); // ✅ opens in new tab
+  window.open(url, "_blank"); //   opens in new tab
 };
 
   const handlePrintMenuOpen = (event) => {
@@ -1162,7 +1162,7 @@ useEffect(() => {
   };
 
   // Function to create procurement
-  // ✅ IMPROVED: Shortage-based PR creation
+  //   IMPROVED: Shortage-based PR creation
   // Calculates shortage = required_qty - available_qty
   // Creates PR ONLY for shortage amount
   // Auto-receives PR and updates inventory
@@ -1170,7 +1170,7 @@ useEffect(() => {
   const createProcurement = async (itemsToProcure) => {
     const token = Cookies.get("token");
     try {
-      // ✅ NEW: Deduplicate items by inventory_id and calculate shortage
+      //   NEW: Deduplicate items by inventory_id and calculate shortage
       // Group items by item_id and sum quantities
       const deduplicatedItems = {};
       for (const item of itemsToProcure) {
@@ -1181,7 +1181,7 @@ useEffect(() => {
       }
       let uniqueItems = Object.values(deduplicatedItems);
 
-      // ✅ NEW: Calculate shortage for each item
+      //   NEW: Calculate shortage for each item
       // Get current available quantities from inventory
       uniqueItems = uniqueItems.map((item) => {
         const inventoryItem = inventory.find(

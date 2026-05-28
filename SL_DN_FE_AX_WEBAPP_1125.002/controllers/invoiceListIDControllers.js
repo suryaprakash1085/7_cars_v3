@@ -199,7 +199,7 @@ const cancelInvoice = async (token, appointment_id, estimateItems) => {
 
     const data = await response.json();
 
-    // ✅ ALWAYS RETURN STRING
+    //   ALWAYS RETURN STRING
     return typeof data?.message === "string"
       ? data.message
       : "Invoice cancelled successfully";

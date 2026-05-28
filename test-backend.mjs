@@ -53,7 +53,7 @@ process.on('SIGINT', () => {
 
 setTimeout(() => {
   if (!hasExited) {
-    console.log('\n✅ Backend has been running for 10 seconds without crashing. It should be working!');
+    console.log('\n  Backend has been running for 10 seconds without crashing. It should be working!');
     console.log('📍 Backend API should be available at http://localhost:8080\n');
     console.log('Press Ctrl+C to stop the backend.\n');
   }

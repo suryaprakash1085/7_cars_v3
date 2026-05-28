@@ -163,7 +163,7 @@ process.on('SIGTERM', () => {
   shutdown();
 });
 
-console.log('\n✅ Servers are starting. Please wait...\n');
+console.log('\n  Servers are starting. Please wait...\n');
 console.log('📍 Frontend: http://localhost:3000');
 // console.log('📍 Backend API: http://localhost:9005\n');
 console.log('⏱️  Frontend will start in ~3 seconds\n');

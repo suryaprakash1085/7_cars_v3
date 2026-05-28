@@ -156,7 +156,7 @@ const CustomerDetail = () => {
     setIsChatOpen(!isChatOpen);
   };
 
-  const [statusChange, setStatusChange] = useState(""); // ✅ ADD HERE
+  const [statusChange, setStatusChange] = useState(""); //   ADD HERE
   const [newSpareInputs, setNewSpareInputs] = useState({});
   const [editingSpare, setEditingSpare] = useState({
     itemIndex: null,

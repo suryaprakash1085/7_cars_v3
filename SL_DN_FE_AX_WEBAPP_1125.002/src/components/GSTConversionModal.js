@@ -30,8 +30,8 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Cookies from "js-cookie";
 
-// ✅ Outside parent — won't remount on re-render
-// ✅ All values normalized to Number to avoid string vs number mismatch
+//   Outside parent — won't remount on re-render
+//   All values normalized to Number to avoid string vs number mismatch
 const GstDropdown = ({ value, onChange, gstOptions, gstLoading }) => {
   // Normalize to number or empty string so MUI Select can match correctly
   const normalizedValue = value === "" || value === null || value === undefined
@@ -51,7 +51,7 @@ const GstDropdown = ({ value, onChange, gstOptions, gstLoading }) => {
           <em>{gstLoading ? "Loading..." : "Select GST"}</em>
         </MenuItem>
         {gstOptions.map((opt) => (
-          // ✅ value is always Number so it matches normalizedValue
+          //   value is always Number so it matches normalizedValue
           <MenuItem key={opt.id} value={Number(opt.gst_percentage)}>
             {opt.gst_name}
           </MenuItem>
@@ -93,7 +93,7 @@ export default function GSTConversionModal({
     fetchGstOptions();
   }, []);
 
-  // ✅ Normalize gst_percent to Number (or "") when loading appointments
+  //   Normalize gst_percent to Number (or "") when loading appointments
   // This ensures pre-selected values match MenuItem values from the API
   useEffect(() => {
     if (open && appointments.length > 0) {

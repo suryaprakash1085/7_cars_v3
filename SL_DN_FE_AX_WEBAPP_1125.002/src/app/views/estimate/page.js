@@ -10,7 +10,7 @@ import {
   deleteAppointment,
   updateAppointment,
   handleScrollToTop,
-  scrollToTopButtonDisplay,
+  scrollToTopButtonDisplay,companydetails,
 } from "../../../../controllers/estimateControllers";
 
 import DynamicListTable from "@/components/DynamicListTable";
@@ -32,7 +32,7 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const limit = 20;
+// const limit = 20;
 
 export default function JobCard() {
   const router = useRouter();
@@ -56,14 +56,14 @@ export default function JobCard() {
   const [openAddCustomerModal, setOpenAddCustomerModal] = useState(false);
   const [openOldCustomerModal, setOpenOldCustomerModal] = useState(false);
   const [selectedOldCustomer, setSelectedOldCustomer] = useState(null);
-
+  const [limit, setLimit] = useState(null);
   const [startDate, setStartDate] = useState(() => {
     const today = new Date();
     return formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
   });
   const [endDate, setEndDate] = useState(() => formatDate(new Date()));
 
-  // ✅ Refs for scroll pagination
+  //   Refs for scroll pagination
   const offsetRef = useRef(0);
   const hasMoreRef = useRef(true);
   const loadingRef = useRef(false);
@@ -79,46 +79,64 @@ export default function JobCard() {
 
   const noOp = () => {};
 
-  // ✅ Initial load / date change
+
   useEffect(() => {
-    const storedToken = Cookies.get("token");
-    setToken(storedToken);
-    tokenRef.current = storedToken;
-    startDateRef.current = startDate;
-    endDateRef.current = endDate;
-
-    offsetRef.current = 0;
-    hasMoreRef.current = true;
-    loadingRef.current = false;
-    setEntries([]);
-    setFilteredEntries([]);
-
-    fetchEntries(
-      storedToken,
-      setEntries,
-      setFilteredEntries,
-      setLoading,
-      setOpenSnackbar,
-      setSnackbarMessage,
-      setSnackbarSeverity,
-      startDate,
-      endDate,
-      limit,
-      0,
-      false
-    ).then((result) => {
-      if (!result || result.data.length === 0) {
-        hasMoreRef.current = false;
-      } else {
-        totalRef.current = result.total;
-        offsetRef.current = limit;
-        hasMoreRef.current = result.total > limit;
+  const fetchCompanyDetails = async () => {
+    try {
+      const details = await companydetails();
+      if (details?.company_details?.length > 0) {
+        const fetchLimit = Number(details.company_details[0].fetch_limit) || 20;
+        setLimit(fetchLimit);
       }
-      loadingRef.current = false;
-    });
-  }, [startDate, endDate]);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  fetchCompanyDetails();
+}, []);
 
-  // ✅ Scroll handler
+  //   Initial load / date change
+//   Initial load / date change
+useEffect(() => {
+  if (limit === null) return;
+
+  const storedToken = Cookies.get("token");
+  setToken(storedToken);
+  tokenRef.current = storedToken;
+  startDateRef.current = startDate;
+  endDateRef.current = endDate;
+
+  offsetRef.current = 0;
+  hasMoreRef.current = true;
+  loadingRef.current = false;
+  setEntries([]);
+  setFilteredEntries([]);
+
+  fetchEntries(
+    storedToken,
+    setEntries,
+    setFilteredEntries,
+    setLoading,
+    setOpenSnackbar,
+    setSnackbarMessage,
+    setSnackbarSeverity,
+    startDate,
+    endDate,
+    limit,
+    0,
+    false
+  ).then((result) => {
+    if (!result || result.data.length === 0) {
+      hasMoreRef.current = false;
+    } else {
+      totalRef.current = result.total;
+      offsetRef.current = limit;
+      hasMoreRef.current = result.total > limit;
+    }
+    loadingRef.current = false;
+  });
+}, [startDate, endDate, limit]);
+  //   Scroll handler
   const handleScroll = (event) => {
     scrollToTopButtonDisplay(event, setShowFab);
 
@@ -129,7 +147,7 @@ export default function JobCard() {
     if (loadingRef.current) return;
 
     if (scrollHeight - scrollTop <= clientHeight + 200) {
-      console.log("✅ API calling offset:", offsetRef.current);
+      console.log("  API calling offset:", offsetRef.current);
       loadingRef.current = true;
 
       fetchEntries(

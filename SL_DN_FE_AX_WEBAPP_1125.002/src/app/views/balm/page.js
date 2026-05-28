@@ -267,7 +267,7 @@ export default function Sidebar() {
 
   return (
     <div>
-      {/* ✅ Show Navbar only when not in tab mode */}
+      {/*   Show Navbar only when not in tab mode */}
       {pageType !== "tab" && <Navbar pageName="" />}
 
       <Box

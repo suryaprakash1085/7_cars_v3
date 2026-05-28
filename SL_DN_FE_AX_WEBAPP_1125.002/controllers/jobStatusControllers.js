@@ -27,10 +27,10 @@ const fetchEntries = async (
     let apiUrl;
 
     if (searchQuery && searchQuery.trim()) {
-      // ✅ search endpoint — no pagination needed
+      //   search endpoint — no pagination needed
       apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/appointment/search/appointments?q=${encodeURIComponent(searchQuery)}`;
     } else {
-      // ✅ all statuses
+      //   all statuses
       const statuses = showDeleted
         ? ["invoiced", "invoice", "deleted", "released", "scheduled"]
         : ["invoiced", "invoice", "released", "scheduled","deleted"];
@@ -58,11 +58,11 @@ const fetchEntries = async (
 
     const json = await response.json();
 
-    // ✅ handle both array and paginated response
+    //   handle both array and paginated response
     const rawData = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
     const total = json.total ?? rawData.length;
 
-    // ✅ filter null customer_id
+    //   filter null customer_id
     const filteredData = rawData.filter(
       (entry) =>
         entry.customer_id !== null &&
@@ -105,6 +105,16 @@ export const handleScrollToTop = () => {
 export const scrollToTopButtonDisplay = (event, setShowFab) => {
   const { scrollTop } = event.target;
   setShowFab(scrollTop > 10);
+};
+export const companydetails = async () => {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ss`);
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error("Error fetching company details:", err);
+    throw err;
+  }
 };
 
 export { fetchEntries };

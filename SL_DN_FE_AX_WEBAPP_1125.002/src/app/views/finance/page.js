@@ -108,7 +108,7 @@ export default function InventoryActivityTabs() {
   {tilesToDisplay.map((tile, index) => (
     <Tab
       key={index}
-      label={tile.name}          // ✅ Add this to show tab name
+      label={tile.name}          //   Add this to show tab name
       icon={
         <img
           src={tile.icon}

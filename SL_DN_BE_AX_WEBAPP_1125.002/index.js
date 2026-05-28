@@ -67,7 +67,7 @@ db.raw("SELECT 1")
     // Run migrations on startup
     try {
       await runMigration();
-      console.log("✅ Database migrations completed");
+      console.log("  Database migrations completed");
     } catch (error) {
       console.error("❌ Migration error:", error.message);
     }
@@ -82,7 +82,7 @@ db.raw("SELECT 1")
           dbConnected = true;
           try {
             await runMigration();
-            console.log("✅ Database migrations completed");
+            console.log("  Database migrations completed");
           } catch (error) {
             console.error("❌ Migration error:", error.message);
           }
@@ -149,7 +149,7 @@ setupUDVTable()
     try {
       const hasUpdatedStatus = await db.schema.hasColumn("udv_items", "failure_reason");
       if (hasUpdatedStatus) {
-        console.log("✅ UDV table is properly configured");
+        console.log("  UDV table is properly configured");
       }
     } catch (checkError) {
       console.warn("Warning checking UDV table:", checkError.message);

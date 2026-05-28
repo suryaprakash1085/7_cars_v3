@@ -347,7 +347,7 @@ export async function createCustomer(req, res) {
 
     await knex.transaction(async (trx) => {
 
-      // ✅ Only require vehicle for non-counterSales
+      //   Only require vehicle for non-counterSales
       if (req.body.sales_type !== "counterSales") {
         if (!req.body.vehicles || req.body.vehicles.length === 0) {
           throw new Error("At least one vehicle is required");

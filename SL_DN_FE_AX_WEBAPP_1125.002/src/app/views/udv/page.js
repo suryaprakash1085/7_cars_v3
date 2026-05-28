@@ -145,7 +145,7 @@ export default function UDVMaster() {
       }
 
       const data = await response.json();
-      // console.log(`✅ Received ${data.uploads?.length || 0} uploads from server`);
+      // console.log(`  Received ${data.uploads?.length || 0} uploads from server`);
       setUploadHistory(data.uploads || []);
       setCurrentPage(1);
     } catch (error) {
@@ -296,7 +296,7 @@ export default function UDVMaster() {
       // console.log("📊 Preparing to fetch upload history...");
       // Refresh history from API
       await fetchUploadHistory();
-      // console.log("✅ History fetched successfully");
+      // console.log("  History fetched successfully");
 
       const hasIssues = responseData.failedCount > 0;
       const statusSummary = selectedEntity === "inventory"
