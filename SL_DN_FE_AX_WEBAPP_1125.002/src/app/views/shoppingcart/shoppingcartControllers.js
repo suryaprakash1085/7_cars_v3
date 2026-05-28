@@ -1,18 +1,40 @@
-const fetchData = async (storedToken, setLoading, setTableRows) => {
+const fetchData = async (
+  storedToken,
+  setLoading,
+  setTableRows,
+  startDate,
+  endDate,
+  limit = 20,
+  offset = 0,
+  append = false
+) => {
   setLoading(true);
+
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/countertopsales/all`,
+      `${process.env.NEXT_PUBLIC_API_URL}/countertopsales/all?startDate=${startDate}&endDate=${endDate}&limit=${limit}&offset=${offset}`,
       {
         headers: {
           Authorization: `Bearer ${storedToken}`,
         },
       }
     );
+
     const data = await response.json();
-    setTableRows(data);
+    const newData = Array.isArray(data.data) ? data.data : [];
+    const total = data.total ?? newData.length;
+
+    if (append) {
+      setTableRows((prev) => [...prev, ...newData]);
+    } else {
+      setTableRows(newData);
+    }
+
+    return { data: newData, total };
+
   } catch (error) {
     console.log("Error fetching data:", error);
+    return { data: [], total: 0 };
   } finally {
     setLoading(false);
   }
@@ -35,7 +57,7 @@ const createCounterSale = async (saleData, token) => {
     if (!response.ok) throw new Error("Failed to create counter sale");
 
     const data = await response.json();
-    return data.id; // Return the ID of the created countertop sale
+    return data.id;
   } catch (err) {
     console.log("Error creating counter sale:", err);
     return null;
@@ -68,6 +90,18 @@ const deleteCTInvoice = async (
     console.log("Error deleting counter sale:", err);
     return false;
   }
+};
+
+export const handleScrollToTop = () => {
+  const container = document.getElementById("scrollable-table");
+  if (container) {
+    container.scrollTo({ top: 0, behavior: "smooth" });
+  }
+};
+
+export const scrollToTopButtonDisplay = (event, setShowFab) => {
+  const { scrollTop } = event.target;
+  setShowFab(scrollTop > 10);
 };
 
 export { fetchData, createCounterSale, deleteCTInvoice };

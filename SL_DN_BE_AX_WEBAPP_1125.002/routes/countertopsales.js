@@ -28,12 +28,255 @@ import { body, validationResult } from "express-validator"; // Import body & val
 // countertopsales
 // sample get
 // Fetch and format all appointments with services and items required
+// router.get("/all", async (req, res) => {
+//   const prefix = await knex("number_range")
+//     .where("id_type", "countersales")
+//   const finalPrefix = prefix[0].prefix
+//   try {
+//     const appointments = await knex("appointments")
+//       .select(
+//         "appointments.appointment_id",
+//         "appointments.customer_id",
+//         "customers.customer_name",
+//         "customers.advance_payment",
+//         "customers.phone",
+//         "customers.street",
+//         "customers.city",
+//         "customers.state",
+//         "appointments.vehicle_id",
+//         "appointments.plateNumber",
+//         "appointments.mechanic_id",
+//         "appointments.km",
+//         "appointments.appointment_date",
+//         "appointments.appointment_time",
+//         "appointments.status",
+//         "appointments.telecaller",
+//         "appointments.notes",
+//         "appointments.feedback",
+//         "appointments.paid_status",
+//         "appointments.invoice_date",
+//         "appointments.paid_amount",
+//         "appointments.advance_balance",
+//         "appointments.invoice_amount",
+//         "appointments.payment_method",
+//         "appointments.completed_date",
+//         "appointments.inspection_date",
+//         "appointments.released_date",
+//         "services_actual.service_id",
+//         "services_actual.service_description",
+//         "services_actual.status as service_status",
+//         "services_actual.service_status as service_actual_status",
+//         "services_actual.price",
+//         "services_actual.service_type",
+//         "services_actual.comments",
+//         "services_actual.uom",
+//         "items_required.item_id",
+//         "items_required.item_name",
+//         "items_required.qty",
+//         "items_required.tax",
+//         "items_required.price",
+//         "vehicles.make",
+//         "vehicles.model",
+//         "vehicles.year",
+//         "vehicles.vin",
+//         "vehicles.fuel_type"
+//       )
+//       .leftJoin(
+//         "customers",
+//         "appointments.customer_id",
+//         "customers.customer_id"
+//       )
+//       .leftJoin(
+//         "services_actual",
+//         "appointments.appointment_id",
+//         "services_actual.appointment_id"
+//       )
+//       .leftJoin(
+//         "items_required",
+//         "services_actual.service_id",
+//         "items_required.service_id"
+//       )
+//       .leftJoin("vehicles", "appointments.vehicle_id", "vehicles.vehicle_id")
+//       .orderBy("appointments.appointment_id")
+//       .where("appointments.appointment_id", "like", `%${finalPrefix}%`)
+//       .where('appointments.status', "not like", "%deleted%")
+
+//     const formattedAppointments = [];
+//     const appointmentMap = {};
+
+//     appointments.forEach((row) => {
+//       if (!appointmentMap[row.appointment_id]) {
+//         appointmentMap[row.appointment_id] = {
+//           _id: `appointment-${row.appointment_id}`,
+//           appointment_id: row.appointment_id,
+//           customer_id: row.customer_id,
+//           customer_name: row.customer_name,
+//           phone: row.phone,
+//           street: row.street,
+//           city: row.city,
+//           state: row.state,
+//           vehicle_id: row.vehicle_id,
+//           plateNumber: row.plateNumber,
+//           mechanic_id: row.mechanic_id,
+//           km: row.km,
+//           appointment_date: row.appointment_date, // .toISOString(),
+//           appointment_time: row.appointment_time,
+//           status: row.status,
+//           telecaller: row.telecaller,
+//           notes: row.notes,
+//           feedback: row.feedback,
+//           paid_status: row.paid_status,
+//           invoice_date: row.invoice_date,
+//           paid_amount: row.paid_amount,
+//           advance_payment: row.advance_balance, // Set advance_payment to advance_balance
+//           advance_balance: row.advance_payment,
+//           invoice_amount: row.invoice_amount,
+//           payment_method: row.payment_method || "cash",
+//           completed_date: row.completed_date,
+//           inspection_date: row.inspection_date,
+//           released_date: row.released_date,
+//           services_actual: [],
+//           make: row.make,
+//           model: row.model,
+//           year: row.year,
+//           vin: row.vin,
+//           fuel_type: row.fuel_type,
+//         };
+//         formattedAppointments.push(appointmentMap[row.appointment_id]);
+//       }
+
+//       const appointment = appointmentMap[row.appointment_id];
+
+//       let service = appointment.services_actual.find(
+//         (s) => s.service_id === row.service_id
+//       );
+
+//       if (!service) {
+//         service = {
+//           _id: `service-${row.service_id}`,
+//           service_id: row.service_id,
+//           service_description: row.service_description,
+//           status: row.service_status,
+//           service_status: row.service_actual_status,
+//           price: row.price,
+//           service_type: row.service_type,
+//           comments: row.comments,
+//           uom: row.uom,
+//           items_required: [],
+//         };
+//         appointment.services_actual.push(service);
+//       }
+
+//       if (row.item_id) {
+//         service.items_required.push({
+//           _id: `item-${row.item_id}`,
+//           item_id: row.item_id,
+//           item_name: row.item_name,
+//           qty: row.qty,
+//           tax: row.tax,
+//           // discount: row.discount,
+//         });
+//       }
+//     });
+
+//     res.status(200).json(formattedAppointments);
+//   } catch (error) {
+//     console.log("Error fetching appointments:", error);
+//     res.status(500).json({
+//       error: "Error fetching appointments",
+//       details: error.message,
+//     });
+//   }
+// });
+
+
 router.get("/all", async (req, res) => {
-  const prefix = await knex("number_range")
-    .where("id_type", "countersales")
-  const finalPrefix = prefix[0].prefix
   try {
-    const appointments = await knex("appointments")
+    let {
+      startDate,
+      endDate,
+      limit = 20,
+      offset = 0,
+    } = req.query;
+
+    limit = parseInt(limit);
+    offset = parseInt(offset);
+
+    const prefix = await knex("number_range")
+      .where("id_type", "countersales");
+
+    const finalPrefix = prefix[0].prefix;
+
+    // ---------------- TOTAL COUNT QUERY ----------------
+    let totalQuery = knex("appointments")
+      .countDistinct("appointments.appointment_id as total")
+      .where(
+        "appointments.appointment_id",
+        "like",
+        `%${finalPrefix}%`
+      )
+      .where("appointments.status", "not like", "%deleted%");
+
+    // Start Date Filter
+    if (startDate) {
+      totalQuery = totalQuery.where(
+        "appointments.appointment_date",
+        ">=",
+        startDate
+      );
+    }
+
+    // End Date Filter
+    if (endDate) {
+      totalQuery = totalQuery.where(
+        "appointments.appointment_date",
+        "<=",
+        endDate
+      );
+    }
+
+    const totalResult = await totalQuery;
+    const total = totalResult[0].total;
+
+    // ---------------- GET UNIQUE APPOINTMENT IDS ----------------
+    let appointmentIdsQuery = knex("appointments")
+      .distinct("appointments.appointment_id")
+      .where(
+        "appointments.appointment_id",
+        "like",
+        `%${finalPrefix}%`
+      )
+      .where("appointments.status", "not like", "%deleted%");
+
+    // Start Date Filter
+    if (startDate) {
+      appointmentIdsQuery = appointmentIdsQuery.where(
+        "appointments.appointment_date",
+        ">=",
+        startDate
+      );
+    }
+
+    // End Date Filter
+    if (endDate) {
+      appointmentIdsQuery = appointmentIdsQuery.where(
+        "appointments.appointment_date",
+        "<=",
+        endDate
+      );
+    }
+
+    const appointmentIds = await appointmentIdsQuery
+      .orderBy("appointments.appointment_id", "desc")
+      .limit(limit)
+      .offset(offset);
+
+    const ids = appointmentIds.map(
+      (item) => item.appointment_id
+    );
+
+    // ---------------- MAIN QUERY ----------------
+    let query = knex("appointments")
       .select(
         "appointments.appointment_id",
         "appointments.customer_id",
@@ -96,10 +339,15 @@ router.get("/all", async (req, res) => {
         "services_actual.service_id",
         "items_required.service_id"
       )
-      .leftJoin("vehicles", "appointments.vehicle_id", "vehicles.vehicle_id")
-      .orderBy("appointments.appointment_id")
-      .where("appointments.appointment_id", "like", `%${finalPrefix}%`)
-      .where('appointments.status', "not like", "%deleted%")
+      .leftJoin(
+        "vehicles",
+        "appointments.vehicle_id",
+        "vehicles.vehicle_id"
+      )
+      .whereIn("appointments.appointment_id", ids)
+      .orderBy("appointments.appointment_id", "desc");
+
+    const appointments = await query;
 
     const formattedAppointments = [];
     const appointmentMap = {};
@@ -119,7 +367,7 @@ router.get("/all", async (req, res) => {
           plateNumber: row.plateNumber,
           mechanic_id: row.mechanic_id,
           km: row.km,
-          appointment_date: row.appointment_date, // .toISOString(),
+          appointment_date: row.appointment_date,
           appointment_time: row.appointment_time,
           status: row.status,
           telecaller: row.telecaller,
@@ -128,7 +376,7 @@ router.get("/all", async (req, res) => {
           paid_status: row.paid_status,
           invoice_date: row.invoice_date,
           paid_amount: row.paid_amount,
-          advance_payment: row.advance_balance, // Set advance_payment to advance_balance
+          advance_payment: row.advance_balance,
           advance_balance: row.advance_payment,
           invoice_amount: row.invoice_amount,
           payment_method: row.payment_method || "cash",
@@ -142,10 +390,14 @@ router.get("/all", async (req, res) => {
           vin: row.vin,
           fuel_type: row.fuel_type,
         };
-        formattedAppointments.push(appointmentMap[row.appointment_id]);
+
+        formattedAppointments.push(
+          appointmentMap[row.appointment_id]
+        );
       }
 
-      const appointment = appointmentMap[row.appointment_id];
+      const appointment =
+        appointmentMap[row.appointment_id];
 
       let service = appointment.services_actual.find(
         (s) => s.service_id === row.service_id
@@ -164,6 +416,7 @@ router.get("/all", async (req, res) => {
           uom: row.uom,
           items_required: [],
         };
+
         appointment.services_actual.push(service);
       }
 
@@ -174,14 +427,22 @@ router.get("/all", async (req, res) => {
           item_name: row.item_name,
           qty: row.qty,
           tax: row.tax,
-          // discount: row.discount,
+          price: row.price,
         });
       }
     });
 
-    res.status(200).json(formattedAppointments);
+    res.status(200).json({
+      total: total,
+      limit,
+      offset,
+      count: formattedAppointments.length,
+      data: formattedAppointments,
+    });
+
   } catch (error) {
     console.log("Error fetching appointments:", error);
+
     res.status(500).json({
       error: "Error fetching appointments",
       details: error.message,

@@ -31,7 +31,7 @@ const fetchData = async (
     // Fetch appointments to get latest appointment dates
     let appointmentDateMap = {};
     try {
-      const appointmentResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/appointments`, {
+      const appointmentResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/appointment`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
