@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useRef } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import dayjs from "dayjs";
@@ -39,6 +39,10 @@ export default function JobCard() {
   const [filteredEntries, 
     setFilteredEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [limit,setLimit] =useState(20);
+  const [offset,setOffset]=useState(0);
+  const isFetching = useRef(false);
+  const [hasMore, setHasMore] = useState(true);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState();
@@ -79,7 +83,9 @@ export default function JobCard() {
 useEffect(() => {
   const storedToken = Cookies.get("token");
   setToken(storedToken);
-
+  setEntries([]);
+  setFilteredEntries([]);
+  setOffset(0);
   fetchEntries(
     storedToken,
     setEntries,
@@ -90,7 +96,11 @@ useEffect(() => {
     setSnackbarSeverity,
     startDate,
     endDate,
-    "invoiced"
+    "invoiced",
+    limit,
+    offset,
+    setOffset,
+     setHasMore
   );
 }, [startDate, endDate]);
 
@@ -214,7 +224,42 @@ const handleSearchSubmit = () => {
       setAppointmentEditModalOpen
     );
   };
+const handleScroll = async (e) => {
+  const { scrollTop, scrollHeight, clientHeight } = e.target;
 
+  // if (
+  //   scrollHeight - scrollTop <= clientHeight + 50 &&
+  //   !loading &&
+  //   !isFetching.current
+  // )
+  if (
+  scrollHeight - scrollTop <= clientHeight + 50 &&
+  !loading &&
+  !isFetching.current &&
+  hasMore
+) {
+    isFetching.current = true;
+
+    await fetchEntries(
+      token,
+      setEntries,
+      setFilteredEntries,
+      setLoading,
+      setOpenSnackbar,
+      setSnackbarMessage,
+      setSnackbarSeverity,
+      startDate,
+      endDate,
+      "invoiced",
+      limit,
+      offset,
+      setOffset,
+      setHasMore
+    );
+
+    isFetching.current = false;
+  }
+};
   return (
     <div>
       <DynamicListTable
@@ -253,6 +298,7 @@ const handleSearchSubmit = () => {
         }}
           dateFilters={dateFilters}
         scrollableTableId="scrollable-table"
+        onScroll={handleScroll}
       />
 
       <Dialog
@@ -393,7 +439,11 @@ const handleSearchSubmit = () => {
                 setSnackbarSeverity,
                 startDate,
                 endDate,
-                "invoiced"
+                "invoiced",
+                limit,
+                offset,
+                setOffset,
+                setHasMore
 
               );
             }}

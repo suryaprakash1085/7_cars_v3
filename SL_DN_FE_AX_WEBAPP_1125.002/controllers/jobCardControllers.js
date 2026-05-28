@@ -16,7 +16,12 @@ export async function fetchEntries(
   setSnackbarSeverity,
   startDate,
   endDate,
-  status
+  status,
+  limit,
+  offset,
+  setOffset,
+  setHasMore
+
 
 ) {
   try {
@@ -36,6 +41,8 @@ export async function fetchEntries(
       ...(companyCode && { company_code: companyCode }),
       ...(startDate && { startDate: startDate }),
       ...(endDate && { endDate: endDate }),
+      ...(limit && {limit:limit}),
+      ...(offset >=0 && {offset:offset}),
       //  ...(status && { status }),
     });
     statuses.forEach((s) => params.append("status", s));
@@ -52,18 +59,35 @@ export async function fetchEntries(
     if (!response.ok) throw new Error("Failed to fetch entries");
 
     const data = await response.json();
+    console.log("API RESPONSE:", data);
     console.log(data)
-    const filteredData = data.filter((entry) =>
-      // entry.appointment_id.startsWith("EST-") &&
-    // (entry.status === "scheduled" || entry.status === "released")
-   (entry.status === "released" || entry.status === "invoice")
-    );
+    console.log("LIMIT:", limit);
+console.log("OFFSET:", offset);
+  //   const filteredData = data.filter((entry) =>
+  //     // entry.appointment_id.startsWith("EST-") &&
+  //   // (entry.status === "scheduled" || entry.status === "released")
+  //  (entry.status === "released" || entry.status === "invoice")
+  //   );
+  const filteredData = data.data.filter(
+  (entry) =>
+    entry.status === "released" ||
+    entry.status === "invoice"
+);
+
 
     // console.log("Filtered Data:", filteredData);
 
-    setEntries(filteredData);
+    // setEntries(filteredData);
+    setEntries((prev)=>([...prev,...filteredData]));
+    setFilteredEntries((prev)=>([...prev,...filteredData]));
+    setOffset((prev)=>prev+limit);
+    if (filteredData.length < limit) {
+  setHasMore(false);
+} else {
+  setHasMore(true);
+}
     // console.log(setEntries)
-    setFilteredEntries(filteredData);
+    // setFilteredEntries(filteredData);
     setLoading(false);
   } catch (err) {
     setOpenSnackbar(true);
