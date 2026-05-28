@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import dayjs from "dayjs";
 import DynamicListTable from "@/components/DynamicListTable.js";
-import { fetchEntries, handleSearch } from "../../../../controllers/invoiceListControllers";
+import { fetchEntries, handleSearch } from "../../../../controllers/cancelInvoice";
 
 export default function CancelInvoice() {
   const router = useRouter();
@@ -17,6 +17,26 @@ export default function CancelInvoice() {
   const [snackBarSeverity, setSnackBarSeverity] = useState();
   const [searchText, setSearchText] = useState("");
   const [pageType, setPageType] = useState(null);
+
+
+   const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    return formatDate(firstDay);
+  });
+
+  const [endDate, setEndDate] = useState(() => {
+    const today = new Date();
+    return formatDate(today);
+  });
+
 
   useEffect(() => {
     const storedToken = Cookies.get("token");
@@ -32,7 +52,10 @@ export default function CancelInvoice() {
       setLoading,
       setOpenSnackbar,
       setSnackbarMessage,
-      setSnackBarSeverity
+      setSnackBarSeverity,
+      startDate,
+      endDate,
+      "invoiced"  
     );
   }, []);
 
@@ -67,6 +90,21 @@ export default function CancelInvoice() {
     },
   ];
 
+  
+
+    const dateFilters = [
+    {
+      label: "Start Date",
+      value: startDate,
+      onChange: (e) => setStartDate(e.target.value),
+    },
+    {
+      label: "End Date",
+      value: endDate,
+      onChange: (e) => setEndDate(e.target.value),
+    },
+  ];
+
   const validInvoices = entries.filter(
     (entry) =>
       entry.status === "invoiced" &&
@@ -80,6 +118,7 @@ export default function CancelInvoice() {
   const handleRowClick = (row) => {
     router.push(`/views/cancelInvoice/${row.appointment_id}`);
   };
+
 
   return (
     <DynamicListTable
@@ -99,6 +138,7 @@ export default function CancelInvoice() {
         severity: snackBarSeverity,
         onClose: () => setOpenSnackbar(false),
       }}
+      dateFilters={dateFilters}
     />
   );
 }

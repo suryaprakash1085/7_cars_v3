@@ -62,7 +62,7 @@ export default function GSTReport() {
 
       // Fetch appointments data
       const response = await fetch(
-     `${process.env.NEXT_PUBLIC_API_URL}/appointment?startDate=${start}&endDate=${end}&status=invoiced`,
+     `${process.env.NEXT_PUBLIC_API_URL}/appointment/gst_allappointments?startDate=${start}&endDate=${end}&status=invoiced&include_gst=true`,
         {
           method: "GET",
           headers: {

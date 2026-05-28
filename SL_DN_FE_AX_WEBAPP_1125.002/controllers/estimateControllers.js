@@ -16,7 +16,7 @@ export async function fetchEntries(
   setSnackbarSeverity,
   startDate,
   endDate,
-  status="released"&&"invoice"
+  // status="released"&&"invoice"
 ) {
   try {
     if (!token) {
@@ -30,16 +30,17 @@ export async function fetchEntries(
     }
 
     const companyCode = getCompanyCode();
- 
+ const statuses = ["released", "invoice"];
+
    //  build query string properly
     const params = new URLSearchParams({
       ...(companyCode && { company_code: companyCode }),
       ...(startDate && { startDate: startDate }),
       ...(endDate && { endDate: endDate }),
-       ...(status && { status }),
+      //  ...(status && { status }),
     });
 
-
+statuses.forEach((s) => params.append("status", s));
     const response = await fetch(
    `${process.env.NEXT_PUBLIC_API_URL}/appointment?${params.toString()}`,
       {

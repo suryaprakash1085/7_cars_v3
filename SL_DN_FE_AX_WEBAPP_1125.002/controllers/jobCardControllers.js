@@ -13,7 +13,11 @@ export async function fetchEntries(
   setLoading,
   setOpenSnackbar,
   setSnackbarMessage,
-  setSnackbarSeverity
+  setSnackbarSeverity,
+  startDate,
+  endDate,
+  status
+
 ) {
   try {
     if (!token) {
@@ -27,10 +31,16 @@ export async function fetchEntries(
     }
 
     const companyCode = getCompanyCode();
-    const queryParams = companyCode ? `?company_code=${encodeURIComponent(companyCode)}` : "";
-
+      const statuses = ["released", "invoice"];
+    const params = new URLSearchParams({
+      ...(companyCode && { company_code: companyCode }),
+      ...(startDate && { startDate: startDate }),
+      ...(endDate && { endDate: endDate }),
+      //  ...(status && { status }),
+    });
+    statuses.forEach((s) => params.append("status", s));
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/appointment${queryParams}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/appointment?${params.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

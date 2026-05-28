@@ -9,7 +9,7 @@ import DynamicListTable from "@/components/DynamicListTable.js";
 import Navbar from "@/components/navbar.js";
 import BulkGSTConversion from "@/components/BulkGSTConversion.js";
 import generatePDFInvoice from "@/components/PDFGenerator_invoice.js";
-import { fetchEntries, handleSearch } from "../../../../controllers/invoiceListControllers";
+import { fetchEntries, handleSearch } from "../../../../controllers/gstinvoiceControllers.js";
 
 export default function GSTInvoice() {
   const router = useRouter();
@@ -69,7 +69,10 @@ export default function GSTInvoice() {
       setSnackbarMessage,
       setSnackBarSeverity,
       startDate,
-      endDate
+      endDate,
+        "invoiced",
+  true
+      
     );
   }, [startDate, endDate]);
 

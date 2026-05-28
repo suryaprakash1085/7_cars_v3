@@ -54,20 +54,45 @@ export default function JobCard() {
   const [openOldCustomerModal, setOpenOldCustomerModal] = useState(false);
   const [selectedOldCustomer, setSelectedOldCustomer] = useState(null);
 
-  useEffect(() => {
-    const storedToken = Cookies.get("token");
-    setToken(storedToken);
 
-    fetchEntries(
-      storedToken,
-      setEntries,
-      setFilteredEntries,
-      setLoading,
-      setOpenSnackbar,
-      setSnackbarMessage,
-      setSnackbarSeverity
-    );
-  }, []);
+   const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+  
+    const [startDate, setStartDate] = useState(() => {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      return formatDate(firstDay);
+    });
+  
+    const [endDate, setEndDate] = useState(() => {
+      const today = new Date();
+      return formatDate(today);
+    });
+
+
+
+
+useEffect(() => {
+  const storedToken = Cookies.get("token");
+  setToken(storedToken);
+
+  fetchEntries(
+    storedToken,
+    setEntries,
+    setFilteredEntries,
+    setLoading,
+    setOpenSnackbar,
+    setSnackbarMessage,
+    setSnackbarSeverity,
+    startDate,
+    endDate,
+    "invoiced"
+  );
+}, [startDate, endDate]);
 
   const columns = [
     {
@@ -142,6 +167,19 @@ export default function JobCard() {
     },
   ];
 
+      const dateFilters = [
+    {
+      label: "Start Date",
+      value: startDate,
+      onChange: (e) => setStartDate(e.target.value),
+    },
+    {
+      label: "End Date",
+      value: endDate,
+      onChange: (e) => setEndDate(e.target.value),
+    },
+  ];
+
 const handleSearchSubmit = () => {
   handleSearch(entries, searchText, "", setFilteredEntries, token);
 };
@@ -189,6 +227,7 @@ const handleSearchSubmit = () => {
         onSearchChange={(e) => setSearchText(e.target.value)}
         onSearchSubmit={handleSearchSubmit}
         onRowClick={handleRowClick}
+       
         extraControls={[
           <Tooltip key="add-customer" title="Add Customer" placement="top">
             <IconButton
@@ -212,6 +251,7 @@ const handleSearchSubmit = () => {
           severity: snackbarSeverity,
           onClose: () => setOpenSnackbar(false),
         }}
+          dateFilters={dateFilters}
         scrollableTableId="scrollable-table"
       />
 
@@ -350,7 +390,11 @@ const handleSearchSubmit = () => {
                 setLoading,
                 setOpenSnackbar,
                 setSnackbarMessage,
-                setSnackbarSeverity
+                setSnackbarSeverity,
+                startDate,
+                endDate,
+                "invoiced"
+
               );
             }}
           />
