@@ -1,10 +1,15 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import dayjs from "dayjs";
 import DynamicListTable from "@/components/DynamicListTable.js";
-import { fetchEntries, handleSearch } from "../../../../controllers/invoiceListControllers";
+import {
+  fetchEntries,
+  handleSearch,
+  handleScrollToTop,
+  scrollToTopButtonDisplay,
+} from "../../../../controllers/invoiceListControllers";
 
 export default function InvoiceList() {
   const router = useRouter();
@@ -20,12 +25,18 @@ export default function InvoiceList() {
 
   const [searchText, setSearchText] = useState("");
   const [pageType, setPageType] = useState(null);
+  const [showFab, setShowFab] = useState(false);
 
-  // pagination states
-  const [offset, setOffset] = useState(0);
-  const limit = 10;
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+const totalRef = useRef(0);
+  const limit = 20;
+
+  const offsetRef = useRef(0);
+  const hasMoreRef = useRef(true);
+  const loadingRef = useRef(false);
+  const searchTextRef = useRef("");
+  const startDateRef = useRef("");
+  const endDateRef = useRef("");
+  const tokenRef = useRef("");
 
   const formatDate = (date) => {
     const year = date.getFullYear();
@@ -39,29 +50,27 @@ export default function InvoiceList() {
     return formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
   });
 
-  const [endDate, setEndDate] = useState(() => {
-    return formatDate(new Date());
-  });
+  const [endDate, setEndDate] = useState(() => formatDate(new Date()));
 
-  // FIRST LOAD
+  useEffect(() => { searchTextRef.current = searchText; }, [searchText]);
+  useEffect(() => { startDateRef.current = startDate; }, [startDate]);
+  useEffect(() => { endDateRef.current = endDate; }, [endDate]);
+
   useEffect(() => {
     const storedToken = Cookies.get("token");
     setToken(storedToken);
+    tokenRef.current = storedToken;           // ✅ store in ref
+    startDateRef.current = startDate;         // ✅ sync immediately
+    endDateRef.current = endDate;             // ✅ sync immediately
     setPageType(Cookies.get("page_type"));
 
-    loadData(0, false);
-  }, [startDate, endDate]);
+    offsetRef.current = 0;
+    hasMoreRef.current = true;
+    loadingRef.current = false;
+    setEntries([]);
 
-  useEffect(() => {
-    setOriginalEntries(entries);
-  }, [entries]);
-
-  // FETCH FUNCTION WRAPPER
-  const loadData = async (newOffset, append) => {
-    if (!token && !Cookies.get("token")) return;
-
-    const data = await fetchEntries(
-      Cookies.get("token"),
+    fetchEntries(
+      storedToken,
       setEntries,
       setLoading,
       setOpenSnackbar,
@@ -71,51 +80,73 @@ export default function InvoiceList() {
       endDate,
       "invoiced",
       limit,
-      newOffset,
-      append
-    );
+      0,
+      false
+    ).then((result) => {
+  console.log("first load result:", result?.length);
+  // ✅ only stop when empty, not when less than limit
+  if (!result || result.length === 0) {
+    hasMoreRef.current = false;
+  } else {
+   totalRef.current = result.total;        
+    offsetRef.current = limit;
+    hasMoreRef.current = result.total > limit;
+  }
+  loadingRef.current = false;
+});
 
-    if (!data || data.length < limit) {
-      setHasMore(false);
-    }
-  };
-
-  // SCROLL HANDLER
-  const handleScroll = async () => {
-    if (loadingMore || !hasMore) return;
-
-    const bottom =
-      window.innerHeight + document.documentElement.scrollTop >=
-      document.documentElement.offsetHeight - 100;
-
-    if (bottom) {
-      setLoadingMore(true);
-
-      const newOffset = offset + limit;
-
-      await loadData(newOffset, true);
-
-      setOffset(newOffset);
-
-      setLoadingMore(false);
-    }
-  };
+  }, [startDate, endDate]);
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll);
+    setOriginalEntries(entries);
+  }, [entries]);
 
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [offset, loadingMore, hasMore]);
+  const noOp = () => {};
 
-  // COLUMNS
+ const handleScroll = (event) => {
+  scrollToTopButtonDisplay(event, setShowFab);
+
+  const { scrollTop, scrollHeight, clientHeight } = event.target;
+
+  if (searchTextRef.current) return;
+  if (!hasMoreRef.current) return;
+  if (loadingRef.current) return;
+
+  if (scrollHeight - scrollTop <= clientHeight + 200) {
+    console.log("✅ API calling offset:", offsetRef.current);
+
+    loadingRef.current = true; // ✅ block immediately — same line, but now BEFORE fetch
+
+    fetchEntries(
+      tokenRef.current,
+      setEntries,
+      noOp,
+      setOpenSnackbar,
+      setSnackbarMessage,
+      setSnackBarSeverity,
+      startDateRef.current,
+      endDateRef.current,
+      "invoiced",
+      limit,
+      offsetRef.current,
+      true
+    ).then((result) => {
+      console.log("scroll result:", result?.length);
+      if (!result || result.length === 0) {
+        hasMoreRef.current = false;
+      } else {
+const newOffset = offsetRef.current + result.data.length;
+    offsetRef.current = newOffset;
+    // ✅ stop when we've loaded everything
+    hasMoreRef.current = newOffset < totalRef.current;
+      }
+      loadingRef.current = false; // ✅ unlock only after API completes
+    });
+  }
+};
+
   const columns = [
-    {
-      key: "customer_name",
-      label: "Customer Name",
-      minWidth: "150px",
-    },
+    { key: "customer_name", label: "Customer Name", minWidth: "150px" },
     {
       key: "plateNumber",
       label: "Plate Number",
@@ -140,11 +171,7 @@ export default function InvoiceList() {
       minWidth: "100px",
       format: (value) => dayjs(value).format("DD/MM/YYYY"),
     },
-    {
-      key: "status",
-      label: "Status",
-      minWidth: "80px",
-    },
+    { key: "status", label: "Status", minWidth: "80px" },
   ];
 
   const handleSearchSubmit = () => {
@@ -167,6 +194,14 @@ export default function InvoiceList() {
       onSearchChange={(e) => setSearchText(e.target.value)}
       onSearchSubmit={handleSearchSubmit}
       onRowClick={handleRowClick}
+      onScroll={handleScroll}
+      scrollableTableId="scrollable-table"
+      scrollToTopDisplay={(e) => scrollToTopButtonDisplay(e, setShowFab)}
+      onScrollToTop={() => {
+        handleScrollToTop();
+        setShowFab(false);
+      }}
+      showScrollFab={showFab}
       snackbar={{
         open: openSnackbar,
         message: snackbarMessage,
