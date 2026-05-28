@@ -1,13 +1,23 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import dayjs from "dayjs";
 import DynamicListTable from "@/components/DynamicListTable.js";
-import { fetchEntries, handleSearch } from "../../../../controllers/cancelInvoice";
+import {
+  fetchEntries,
+  handleSearch,
+  handleScrollToTop,
+  scrollToTopButtonDisplay,
+} from "../../../../controllers/cancelInvoice";
+
+
+
+const limit = 20;
 
 export default function CancelInvoice() {
   const router = useRouter();
+
   const [token, setToken] = useState();
   const [entries, setEntries] = useState([]);
   const [originalEntries, setOriginalEntries] = useState([]);
@@ -17,108 +27,151 @@ export default function CancelInvoice() {
   const [snackBarSeverity, setSnackBarSeverity] = useState();
   const [searchText, setSearchText] = useState("");
   const [pageType, setPageType] = useState(null);
+  const [showFab, setShowFab] = useState(false);
 
-
-   const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
+  const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
   const [startDate, setStartDate] = useState(() => {
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    return formatDate(firstDay);
+    return formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
   });
+  const [endDate, setEndDate] = useState(() => formatDate(new Date()));
 
-  const [endDate, setEndDate] = useState(() => {
-    const today = new Date();
-    return formatDate(today);
-  });
+  // ✅ Refs for scroll pagination
+  const offsetRef = useRef(0);
+  const hasMoreRef = useRef(true);
+  const loadingRef = useRef(false);
+  const totalRef = useRef(0);
+  const tokenRef = useRef("");
+  const searchTextRef = useRef("");
+  const startDateRef = useRef("");
+  const endDateRef = useRef("");
 
+  useEffect(() => { searchTextRef.current = searchText; }, [searchText]);
+  useEffect(() => { startDateRef.current = startDate; }, [startDate]);
+  useEffect(() => { endDateRef.current = endDate; }, [endDate]);
 
+  const noOp = () => {};
+
+  // ✅ Initial load / date change
   useEffect(() => {
     const storedToken = Cookies.get("token");
     setToken(storedToken);
+    tokenRef.current = storedToken;
+    startDateRef.current = startDate;
+    endDateRef.current = endDate;
     setPageType(Cookies.get("page_type"));
+
+    offsetRef.current = 0;
+    hasMoreRef.current = true;
+    loadingRef.current = false;
+    setEntries([]);
+    setOriginalEntries([]);
 
     fetchEntries(
       storedToken,
-      (data) => {
-        setEntries(data);
-        setOriginalEntries(data);
-      },
+      (data) => { setEntries(data); setOriginalEntries(data); },
       setLoading,
       setOpenSnackbar,
       setSnackbarMessage,
       setSnackBarSeverity,
       startDate,
       endDate,
-      "invoiced"  
-    );
-  }, []);
+      "invoiced",
+      limit,
+      0,
+      false
+    ).then((result) => {
+      if (!result || result.data.length === 0) {
+        hasMoreRef.current = false;
+      } else {
+        totalRef.current = result.total;
+        offsetRef.current = limit;
+        hasMoreRef.current = result.total > limit;
+      }
+      loadingRef.current = false;
+    });
+  }, [startDate, endDate]);
+
+  // ✅ Scroll handler
+  const handleScroll = (event) => {
+    scrollToTopButtonDisplay(event, setShowFab);
+
+    const { scrollTop, scrollHeight, clientHeight } = event.target;
+
+    if (searchTextRef.current) return;
+    if (!hasMoreRef.current) return;
+    if (loadingRef.current) return;
+
+    if (scrollHeight - scrollTop <= clientHeight + 200) {
+      console.log("✅ API calling offset:", offsetRef.current);
+      loadingRef.current = true;
+
+      fetchEntries(
+        tokenRef.current,
+       (data) => { setEntries(data); setOriginalEntries(data); },
+       noOp,
+        setOpenSnackbar,
+        setSnackbarMessage,
+        setSnackBarSeverity,
+        startDateRef.current,
+        endDateRef.current,
+        "invoiced",
+        limit,
+        offsetRef.current,
+        true
+      ).then((result) => {
+        if (!result || result.data.length === 0) {
+          hasMoreRef.current = false;
+          loadingRef.current = false;
+        } else {
+          const newOffset = offsetRef.current + result.data.length;
+          offsetRef.current = newOffset;
+          if (newOffset >= totalRef.current) {
+            hasMoreRef.current = false;
+            loadingRef.current = false;
+          } else {
+            hasMoreRef.current = true;
+            loadingRef.current = false;
+          }
+        }
+      });
+    }
+  };
 
   const columns = [
     {
-      key: "plateNumber",
-      label: "Plate Number",
-      minWidth: "100px",
+      key: "plateNumber", label: "Plate Number", minWidth: "100px",
       format: (value, row) => value || row.vehicle_id || "N/A",
     },
     {
-      key: "phone",
-      label: "Phone",
-      minWidth: "120px",
+      key: "phone", label: "Phone", minWidth: "120px",
       format: (value, row) => row.contact?.phone || row.phone || "N/A",
     },
     {
-      key: "appointment_date",
-      label: "Date",
-      minWidth: "100px",
+      key: "appointment_date", label: "Date", minWidth: "100px",
       format: (value) => dayjs(value).format("DD/MM/YYYY"),
     },
-    {
-      key: "appointment_time",
-      label: "Time",
-      minWidth: "80px",
-    },
-    {
-      key: "status",
-      label: "Status",
-      minWidth: "80px",
-    },
-  ];
-
-  
-
-    const dateFilters = [
-    {
-      label: "Start Date",
-      value: startDate,
-      onChange: (e) => setStartDate(e.target.value),
-    },
-    {
-      label: "End Date",
-      value: endDate,
-      onChange: (e) => setEndDate(e.target.value),
-    },
+    { key: "appointment_time", label: "Time", minWidth: "80px" },
+    { key: "status", label: "Status", minWidth: "80px" },
   ];
 
   const validInvoices = entries.filter(
-    (entry) =>
-      entry.status === "invoiced" &&
-      entry.plateNumber !== "CounterSales"
+    (entry) => entry.status === "invoiced" && entry.plateNumber !== "CounterSales"
   );
 
   const handleSearchSubmit = () => {
-    handleSearch(searchText, originalEntries, setEntries);
+    handleSearch(searchText, originalEntries, setEntries, token);
   };
 
   const handleRowClick = (row) => {
     router.push(`/views/cancelInvoice/${row.appointment_id}`);
   };
-
 
   return (
     <DynamicListTable
@@ -132,13 +185,26 @@ export default function CancelInvoice() {
       onSearchChange={(e) => setSearchText(e.target.value)}
       onSearchSubmit={handleSearchSubmit}
       onRowClick={handleRowClick}
+      onScroll={handleScroll}
+      scrollableTableId="scrollable-table"
+      onScrollToTop={() => { handleScrollToTop(); setShowFab(false); }}
+      showScrollFab={showFab}
       snackbar={{
         open: openSnackbar,
         message: snackbarMessage,
         severity: snackBarSeverity,
         onClose: () => setOpenSnackbar(false),
       }}
-      dateFilters={dateFilters}
+      dateFilters={[
+        {
+          label: "Start Date", value: startDate,
+          onChange: (e) => { if (e.target.value !== startDate) setStartDate(e.target.value); },
+        },
+        {
+          label: "End Date", value: endDate,
+          onChange: (e) => { if (e.target.value !== endDate) setEndDate(e.target.value); },
+        },
+      ]}
     />
   );
 }
