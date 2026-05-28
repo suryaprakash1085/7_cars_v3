@@ -130,18 +130,22 @@ const totalRef = useRef(0);
       limit,
       offsetRef.current,
       true
-    ).then((result) => {
-      console.log("scroll result:", result?.length);
-      if (!result || result.length === 0) {
-        hasMoreRef.current = false;
-      } else {
-const newOffset = offsetRef.current + result.data.length;
+    )
+   .then((result) => {
+     console.log("data.length:", result.data.length);
+  console.log("newOffset:", offsetRef.current + result.data.length);
+  console.log("total:", totalRef.current);
+    totalRef.current = result.total;
+  if (!result || result.data.length === 0) {
+    
+    hasMoreRef.current = false;
+  } else {
+    const newOffset = offsetRef.current + result.data.length;
     offsetRef.current = newOffset;
-    // ✅ stop when we've loaded everything
-    hasMoreRef.current = newOffset < totalRef.current;
-      }
-      loadingRef.current = false; // ✅ unlock only after API completes
-    });
+    hasMoreRef.current = newOffset < totalRef.current; // ✅ stops exactly at total
+  }
+  loadingRef.current = false;
+});
   }
 };
 
