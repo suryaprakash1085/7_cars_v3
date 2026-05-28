@@ -154,7 +154,11 @@ export async function createAppointment(req, res) {
 
 export async function getAllAppointments(req, res) {
   try {
-    let { startDate, endDate,status} = req.query;
+    let { startDate, endDate,status, limit, offset} = req.query;
+
+        limit = parseInt(limit) || 10;
+    offset = parseInt(offset) || 0;
+
     console.log("Received query params:", { startDate, endDate });
     // For GET requests, only filter by company code if explicitly provided
     // Do NOT extract from token to avoid filtering based on token's company_code
@@ -321,8 +325,9 @@ export async function getAllAppointments(req, res) {
  
 
       })
-      .orderBy("appointments.appointment_date", "desc");
-
+      .orderBy("appointments.appointment_date", "desc")
+       .limit(limit)
+      .offset(offset);
     // Map appointments with services and items
     const formattedAppointments = [];
     const appointmentMap = {};
@@ -415,7 +420,13 @@ export async function getAllAppointments(req, res) {
       }
     });
 
-    res.status(200).json(formattedAppointments);
+      res.status(200).json({
+      total: formattedAppointments.length,
+      limit,
+      offset,
+      data: formattedAppointments,
+    });
+
   } catch (error) {
     console.error("Error fetching appointments:", error);
     res.status(500).json({

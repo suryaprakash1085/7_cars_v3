@@ -8,17 +8,24 @@ import { fetchEntries, handleSearch } from "../../../../controllers/invoiceListC
 
 export default function InvoiceList() {
   const router = useRouter();
+
   const [token, setToken] = useState();
   const [entries, setEntries] = useState([]);
   const [originalEntries, setOriginalEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState();
   const [snackBarSeverity, setSnackBarSeverity] = useState();
+
   const [searchText, setSearchText] = useState("");
   const [pageType, setPageType] = useState(null);
 
-
+  // pagination states
+  const [offset, setOffset] = useState(0);
+  const limit = 10;
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const formatDate = (date) => {
     const year = date.getFullYear();
@@ -29,23 +36,32 @@ export default function InvoiceList() {
 
   const [startDate, setStartDate] = useState(() => {
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    return formatDate(firstDay);
+    return formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
   });
 
   const [endDate, setEndDate] = useState(() => {
-    const today = new Date();
-    return formatDate(today);
+    return formatDate(new Date());
   });
 
-
+  // FIRST LOAD
   useEffect(() => {
     const storedToken = Cookies.get("token");
     setToken(storedToken);
     setPageType(Cookies.get("page_type"));
 
-    fetchEntries(
-      storedToken,
+    loadData(0, false);
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    setOriginalEntries(entries);
+  }, [entries]);
+
+  // FETCH FUNCTION WRAPPER
+  const loadData = async (newOffset, append) => {
+    if (!token && !Cookies.get("token")) return;
+
+    const data = await fetchEntries(
+      Cookies.get("token"),
       setEntries,
       setLoading,
       setOpenSnackbar,
@@ -53,14 +69,47 @@ export default function InvoiceList() {
       setSnackBarSeverity,
       startDate,
       endDate,
-      "invoiced"
+      "invoiced",
+      limit,
+      newOffset,
+      append
     );
-  }, [startDate, endDate]);
-  // console.log("Entries in page component:", entries);
-  useEffect(() => {
-    setOriginalEntries(entries);
-  }, [entries]);
 
+    if (!data || data.length < limit) {
+      setHasMore(false);
+    }
+  };
+
+  // SCROLL HANDLER
+  const handleScroll = async () => {
+    if (loadingMore || !hasMore) return;
+
+    const bottom =
+      window.innerHeight + document.documentElement.scrollTop >=
+      document.documentElement.offsetHeight - 100;
+
+    if (bottom) {
+      setLoadingMore(true);
+
+      const newOffset = offset + limit;
+
+      await loadData(newOffset, true);
+
+      setOffset(newOffset);
+
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [offset, loadingMore, hasMore]);
+
+  // COLUMNS
   const columns = [
     {
       key: "customer_name",
@@ -83,13 +132,8 @@ export default function InvoiceList() {
       key: "phone",
       label: "Phone",
       minWidth: "120px",
-      format: (value, row) => row.contact?.phone || row.phone || "N/A",
+      format: (value, row) => row.phone || "N/A",
     },
-    // {
-    //   key: "appointment_time",
-    //   label: "Time",
-    //   minWidth: "80px",
-    // },
     {
       key: "appointment_date",
       label: "Date",
@@ -100,23 +144,6 @@ export default function InvoiceList() {
       key: "status",
       label: "Status",
       minWidth: "80px",
-    },
-  ];
-
-  const invoicedEntries = entries.filter(
-    (entry) => entry.status === "invoice" || entry.status === "invoiced"
-  );
-
-  const dateFilters = [
-    {
-      label: "Start Date",
-      value: startDate,
-      onChange: (e) => setStartDate(e.target.value),
-    },
-    {
-      label: "End Date",
-      value: endDate,
-      onChange: (e) => setEndDate(e.target.value),
     },
   ];
 
@@ -133,7 +160,7 @@ export default function InvoiceList() {
       title="Invoice List"
       columns={columns}
       data={entries}
-      filteredData={invoicedEntries}
+      filteredData={entries}
       loading={loading}
       showNavbar={pageType !== "tab"}
       searchText={searchText}
@@ -146,7 +173,18 @@ export default function InvoiceList() {
         severity: snackBarSeverity,
         onClose: () => setOpenSnackbar(false),
       }}
-      dateFilters={dateFilters}
+      dateFilters={[
+        {
+          label: "Start Date",
+          value: startDate,
+          onChange: (e) => setStartDate(e.target.value),
+        },
+        {
+          label: "End Date",
+          value: endDate,
+          onChange: (e) => setEndDate(e.target.value),
+        },
+      ]}
     />
   );
 }

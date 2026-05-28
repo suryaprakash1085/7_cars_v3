@@ -9,27 +9,51 @@ async function fetchEntries(
   setOpenSnackbar,
   setSnackbarMessage,
   setSnackBarSeverity,
-  startDate, // new parameter
-  endDate  ,
-  status  // new parameter
+  startDate,
+  endDate,
+  status,
+  limit = 10,
+  offset = 0
 ) {
   try {
+
+    setLoading(true);
+
     if (!token) {
+
       setOpenSnackbar(true);
+
       setSnackbarMessage(
         "Unauthorized. Please log in with appropriate user credentials."
       );
+
       setSnackBarSeverity("error");
+
       setLoading(false);
+
       return;
     }
 
-    // Construct query parameters
+    // Query params
     const params = new URLSearchParams();
-    if (startDate) params.append("startDate", startDate);
-    if (endDate) params.append("endDate", endDate);
-    // if (status) params.append("status", invoiced);
-if (status) params.append("status", status);
+
+    if (startDate) {
+      params.append("startDate", startDate);
+    }
+
+    if (endDate) {
+      params.append("endDate", endDate);
+    }
+
+    if (status) {
+      params.append("status", status);
+    }
+
+    // Pagination
+    params.append("limit", limit);
+    params.append("offset", offset);
+
+    // API Call
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/appointment?${params.toString()}`,
       {
@@ -39,16 +63,31 @@ if (status) params.append("status", status);
       }
     );
 
-    if (!response.ok) throw new Error("Failed to fetch entries");
+    if (!response.ok) {
+      throw new Error("Failed to fetch entries");
+    }
 
     const data = await response.json();
-    setEntries(data);
-    setLoading(false);
+
+    // Ensure array
+  setEntries(Array.isArray(data.data) ? data.data : []);
+
   } catch (err) {
+
+    console.error(err);
+
     setOpenSnackbar(true);
-    setSnackbarMessage(err.message);
+
+    setSnackbarMessage(
+      err.message || "Something went wrong"
+    );
+
     setSnackBarSeverity("error");
+
+  } finally {
+
     setLoading(false);
+
   }
 }
 
