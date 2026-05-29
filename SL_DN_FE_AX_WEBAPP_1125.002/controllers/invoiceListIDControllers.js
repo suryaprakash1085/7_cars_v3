@@ -111,8 +111,8 @@ if (typeof setInvoiceDate === "function") {
     // console.log("Fetched Customer Data:", customerData);
     setCustomer(customerData);
     setVehicleId(vehicleId);
-    setInventory(inventoryData);
-
+    // setInventory(inventoryData);
+   setInventory(Array.isArray(inventoryData.data) ? inventoryData.data : []);
     // ---------- FILTER + PREFILL ----------
     if (
       appointmentData.services_actual &&

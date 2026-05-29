@@ -526,18 +526,23 @@ const handleViewPDFInNewTab = async () => {
   // };
   // console.log(getFilteredInventory)
 
-  const getFilteredInventory = (type) => {
-    // console.log("Filtering inventory for type:", type);
-    // console.log("Current inventory:", inventory); // Check if inventory has data
+  // const getFilteredInventory = (type) => {
+  //   // console.log("Filtering inventory for type:", type);
+  //   // console.log("Current inventory:", inventory); // Check if inventory has data
 
-    if (!inventory || inventory.length === 0) {
-      // console.log("Inventory is empty or undefined");
-      return [];
-    }
-    // console.log("Filtered Inventory:", filteredItems);
-    return inventory;
-  };
-
+  //   if (!inventory || inventory.length === 0) {
+  //     // console.log("Inventory is empty or undefined");
+  //     return [];
+  //   }
+  //   // console.log("Filtered Inventory:", filteredItems);
+  //   return inventory;
+  // };
+const getFilteredInventory = (type) => {
+  const safeInventory = Array.isArray(inventory) ? inventory : [];
+  return safeInventory.filter(
+    (item) => item.category?.toLowerCase() === type?.toLowerCase(),
+  );
+};
   const handleTypeChange = (index, value) => {
     setEstimateItems((prevItems) => {
       const updatedItems = [...prevItems];
