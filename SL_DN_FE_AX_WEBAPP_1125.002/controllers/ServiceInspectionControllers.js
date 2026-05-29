@@ -5,8 +5,15 @@ export async function fetchEntries(
   setEntries,
   setFilteredEntries,
   setLoading,
-  setError
-) {
+  setError,
+  
+  limit,
+  offset,
+  setHasMore,
+  startDate,
+  endDate,
+  reset=false
+){
   try {
     const token = Cookies.get("token");
     if (!token) {
@@ -15,21 +22,48 @@ export async function fetchEntries(
       return;
     }
 
+//     const response = await fetch(
+//   `${process.env.NEXT_PUBLIC_API_URL}/appointment?limit=${limit}&offset=${offset}&status=inspection`,
+//   {
+//     headers: {
+//       Authorization: `Bearer ${token}`,
+//     },
+//   }
+// );
+const params = new URLSearchParams({
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
+      status: "inspection",
+      limit,
+      offset,
+    });
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/appointment`,
+      `${process.env.NEXT_PUBLIC_API_URL}/appointment?${params.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       }
     );
-
     if (!response.ok) throw new Error("Failed to fetch entries");
 
-    const data = await response.json();
-    console.log(data)
-    setEntries(data);
-    setFilteredEntries(data);
+ const data = await response.json();
+
+const list = Array.isArray(data)
+  ? data
+  : data?.data || data?.result || [];
+  if (list.length < limit) {
+  setHasMore(false);
+}
+
+// setEntries(list);
+// setFilteredEntries(list);
+// setEntries((prev) => [...prev, ...list]);
+// setFilteredEntries((prev) => [...prev, ...list]);
+setEntries((prev) => (reset ? list : [...prev, ...list]));
+setFilteredEntries((prev) => (reset ? list : [...prev, ...list]));
     setLoading(false);
   } catch (err) {
     setError(err.message);

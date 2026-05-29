@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useRef,useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import dayjs from "dayjs";
@@ -9,7 +9,8 @@ import {
   handleSearch,
   handleCardClick,
 } from "../../../../controllers/ServiceInspectionControllers.js";
-
+import { scrollToTopButtonDisplay, handleScrollToTop } from "../../../../controllers/ServiceInspectionControllers.js";
+const LIMIT = 17;
 export default function ServiceInspection() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -20,12 +21,158 @@ export default function ServiceInspection() {
   const [filteredEntries, setFilteredEntries] = useState([]);
   const [pageType, setPageType] = useState(null);
   const [showFab, setShowFab] = useState(false);
+  
+const [offset, setOffset] = useState(0);
+const [hasMore, setHasMore] = useState(true);
+const [isLoadingMore, setIsLoadingMore] = useState(false);
+const hasMoreRef = useRef(hasMore);
+const isFetchingRef = useRef(false);
+const isLoadingMoreRef = useRef(isLoadingMore);
+const offsetRef = useRef(offset);
 
-  useEffect(() => {
-    fetchEntries(setEntries, setFilteredEntries, setLoading, setError);
-    setPageType(Cookies.get("page_type"));
-  }, []);
+hasMoreRef.current = hasMore;
+isLoadingMoreRef.current = isLoadingMore;
+offsetRef.current = offset;
+// const formatDate = (date) => {
+//   const year = date.getFullYear();
+//   const month = String(date.getMonth() + 1).padStart(2, "0");
+//   const day = String(date.getDate()).padStart(2, "0");
+//   return `${year}-${month}-${day}`;
+// };
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+const [startDate, setStartDate] = useState(() => {
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  return formatDate(firstDay);
+});
 
+const [endDate, setEndDate] = useState(() => {
+  const today = new Date();
+  return formatDate(today);
+});
+// const loadMore = () => {
+//   if (!hasMore || isLoadingMore) return;
+
+//   setIsLoadingMore(true);
+
+//   const newOffset = offset + limit;
+//   setOffset(newOffset);
+
+//   fetchEntries(
+//     setEntries,
+//     setFilteredEntries,
+//     setLoading,
+//     setError,
+//     limit,
+//     newOffset,
+//     setHasMore,
+//     startDate,
+//     endDate,
+//     false
+//   ).finally(() => {
+//     setIsLoadingMore(false);
+//   });
+// };
+const loadMore = useCallback(async () => {
+  console.log("loadMore called", {
+    hasMore: hasMoreRef.current,
+    isLoadingMore: isLoadingMoreRef.current,
+    offset: offsetRef.current,
+  });
+
+  // if (!hasMoreRef.current || isLoadingMoreRef.current) return;
+if (!hasMoreRef.current || isFetchingRef.current) return;
+isFetchingRef.current = true;
+  setIsLoadingMore(true);
+  const newOffset = offsetRef.current + LIMIT;
+  setOffset(newOffset);
+
+  await fetchEntries(
+    setEntries,
+    setFilteredEntries,
+    () => {},
+    setError,
+    LIMIT,
+    newOffset,
+    setHasMore,
+    startDate,
+    endDate,
+    false
+  );
+  isFetchingRef.current = false;
+  setIsLoadingMore(false);
+}, [startDate, endDate]);
+//  useEffect(() => {
+//   if (!hasMore) return;
+
+//   let timeout;
+
+//   const handleScroll = () => {
+//     clearTimeout(timeout);
+
+//     timeout = setTimeout(() => {
+//       if (
+//         window.innerHeight + document.documentElement.scrollTop + 100 >=
+//         document.documentElement.scrollHeight
+//       ) {
+//         loadMore();
+//       }
+//     }, 200);
+//   };
+
+//   window.addEventListener("scroll", handleScroll);
+//   return () => window.removeEventListener("scroll", handleScroll);
+// }, [offset, hasMore, isLoadingMore]);
+
+  // useEffect(() => {
+  //   fetchEntries(setEntries, setFilteredEntries, setLoading, setError,limit,offset,setHasMore);
+  //   setPageType(Cookies.get("page_type"));
+  // }, []);
+//   useEffect(() => {
+//   fetchEntries(
+//     setEntries,
+//     setFilteredEntries,
+//     setLoading,
+//     setError,
+    
+
+//     limit,
+//     0,
+//     setHasMore,
+//     startDate,
+//     endDate,
+//     true
+//   );
+
+//   setPageType(Cookies.get("page_type"));
+// }, [startDate,endDate]);
+useEffect(() => {
+    isFetchingRef.current = false; 
+  setOffset(0);
+  setHasMore(true);
+  setEntries([]);
+  setFilteredEntries([]);
+
+  fetchEntries(
+    setEntries,
+    setFilteredEntries,
+    setLoading,
+    setError,
+    LIMIT,
+    0,
+    setHasMore,
+    startDate,
+    endDate,
+    true
+  );
+
+  setPageType(Cookies.get("page_type"));
+}, [startDate, endDate]);
   const columns = [
     {
       key: "customer_name",
@@ -61,31 +208,94 @@ export default function ServiceInspection() {
       minWidth: "80px",
     },
   ];
+const dateFilters = [
+  {
+    label: "Start Date",
+    value: startDate,
+    onChange: (e) => setStartDate(e.target.value),
+  },
+  {
+    label: "End Date",
+    value: endDate,
+    onChange: (e) => setEndDate(e.target.value),
+  },
+];
+  // const filteredInspectionData = filteredEntries.filter(
+  //   (tile) => tile.status === "inspection"
+  // );
+// const safeEntries = Array.isArray(filteredEntries) ? filteredEntries : [];
 
-  const filteredInspectionData = filteredEntries.filter(
-    (tile) => tile.status === "inspection"
-  );
+// const filteredInspectionData = safeEntries.filter(
+//   (tile) => tile.status === "inspection"
+// );
+// const filteredInspectionData = filteredEntries.filter(
+//   (tile) => tile.status === "inspection"
+// );
 
+
+// const filteredInspectionData = safeEntries.filter(
+//   (tile) => tile.status === "inspection"
+// );
+const filteredInspectionData = (filteredEntries || []).filter(
+  (tile) => tile.status === "inspection"
+);
+// const filteredInspectionData = (filteredEntries || []).map((tile) => ({
+//   ...tile,
+//   status: "inspection",
+// }));
   const handleSearchSubmit = async () => {
     await handleSearch(searchText, selectedOption, entries, setFilteredEntries);
   };
+//   const handleScroll = (event) => {
+//   const { scrollTop, scrollHeight, clientHeight } = event.target;
+//   if (scrollTop + clientHeight >= scrollHeight - 150) {
+//     loadMore();
+//   }
+// };
+const handleScroll = (event) => {
+  const { scrollTop, scrollHeight, clientHeight } = event.target;
 
+  // Show/hide scroll to top FAB
+  if (scrollTop > 200) {
+    setShowFab(true);
+  } else {
+    setShowFab(false);
+  }
+
+  // Infinite scroll
+  if (scrollTop + clientHeight >= scrollHeight - 150) {
+    loadMore();
+  }
+};
   const handleRowClick = (row) => {
     handleCardClick(router, row.appointment_id);
   };
 
   return (
     <DynamicListTable
-      title="Service Center"
+      title="Service Inspection"
       columns={columns}
-      data={entries}
-      filteredData={filteredInspectionData}
+     data={filteredEntries}
+
+      filteredData={filteredEntries}
+      dateFilters={dateFilters}
       loading={loading}
       showNavbar={pageType !== "tab"}
       searchText={searchText}
       onSearchChange={(e) => setSearchText(e.target.value)}
       onSearchSubmit={handleSearchSubmit}
       onRowClick={handleRowClick}
+      // isLoadingMore={isLoadingMore}
+      showLoadingSpinner={isLoadingMore}
+      onScroll={handleScroll}
+      scrollToTopDisplay={handleScroll}
+showScrollFab={showFab}
+onScrollToTop={() => {
+  const el = document.getElementById("scrollable-table");
+  if (el) el.scrollTop = 0;
+  setShowFab(false);
+}}
+scrollableTableId="scrollable-table"
       snackbar={{
         open: false,
       }}
