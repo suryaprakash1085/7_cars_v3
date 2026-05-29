@@ -9,11 +9,12 @@ import {
   handleSearch,
   handleScrollToTop,
   scrollToTopButtonDisplay,
+  companydetails,
 } from "../../../../controllers/cancelInvoice";
 
 
 
-const limit = 20;
+
 
 export default function CancelInvoice() {
   const router = useRouter();
@@ -52,6 +53,23 @@ export default function CancelInvoice() {
   const startDateRef = useRef("");
   const endDateRef = useRef("");
 
+  const [limit, setLimit] = useState(null);
+
+  useEffect(() => {
+  const fetchCompanyDetails = async () => {
+    try {
+      const details = await companydetails();
+      if (details?.company_details?.length > 0) {
+        const fetchLimit = Number(details.company_details[0].fetch_limit) || 20;
+        setLimit(fetchLimit);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  fetchCompanyDetails();
+}, []);
+
   useEffect(() => { searchTextRef.current = searchText; }, [searchText]);
   useEffect(() => { startDateRef.current = startDate; }, [startDate]);
   useEffect(() => { endDateRef.current = endDate; }, [endDate]);
@@ -60,6 +78,7 @@ export default function CancelInvoice() {
 
   //   Initial load / date change
   useEffect(() => {
+      if (limit === null) return;
     const storedToken = Cookies.get("token");
     setToken(storedToken);
     tokenRef.current = storedToken;
@@ -96,7 +115,7 @@ export default function CancelInvoice() {
       }
       loadingRef.current = false;
     });
-  }, [startDate, endDate]);
+  }, [startDate, endDate, limit]);
 
   //   Scroll handler
   const handleScroll = (event) => {
