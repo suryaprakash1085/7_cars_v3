@@ -49,12 +49,12 @@ export async function fetchEntries(
 
     // ✅ filter valid services
     const filteredData = rawData.filter((entry) => {
-      const validStatus = entry.status === "scheduled" || entry.status === "released";
-      if (!validStatus) return false;
-      if (!entry.services_actual || entry.services_actual.length === 0) return false;
-      return entry.services_actual.some(
-        (s) => s.service_description && s.service_description.trim() !== ""
-      );
+       return entry.status === "scheduled" || entry.status === "released";
+      // if (!validStatus) return false;
+      // if (!entry.services_actual || entry.services_actual.length === 0) return false;
+      // return entry.services_actual.some(
+      //   (s) => s.service_description && s.service_description.trim() !== ""
+      // );
     });
 
   //  after — deduplicate by appointment_id
@@ -70,6 +70,7 @@ if (append) {
     return [...prev, ...unique];
   });
 } else {
+  console.log("Resetting entries with new data", filteredData);
   setEntries(filteredData);
   setFilteredEntries(filteredData);
 }
