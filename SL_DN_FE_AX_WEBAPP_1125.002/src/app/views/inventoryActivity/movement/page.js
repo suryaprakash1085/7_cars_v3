@@ -18,6 +18,7 @@ import {
   scrollToTopButtonDisplay,
   handleScrollToTop,
 } from "../../../../../controllers/movementControllers.js";
+import { fetchCompanyDetails } from "../../../../../controllers/LeadsControllers.js";
 
 import { styled } from "@mui/material/styles";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
@@ -100,7 +101,9 @@ export default function Inventory() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-  const limit = 100;
+
+  const [limit, setLimit] = useState(null);
+
   const isMobile = useMediaQuery("(max-width:900px)");
   const [currentTransactionDetails, setCurrentTransactiondetails] = useState({
     inventory_name: "",
@@ -117,15 +120,22 @@ export default function Inventory() {
 
   // const filteredRows = filterRows(token, rows, searchQuery, filterType);
 
-  useEffect(() => {
+useEffect(() => {
+  if (token) {
+    fetchCompanyDetails(token, setLimit);
+  }
+}, [token]);
+
+
+
+
+useEffect(() => {
+  if (token && limit !== null) {
+
     async function fetchInventory() {
       try {
-        if (!token) {
-          throw new Error("No token found. Please log in.");
-        }
-
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/inventory/?limit= ${limit}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/inventory/?limit=${limit}`,
           {
             method: "GET",
             headers: {
@@ -134,24 +144,26 @@ export default function Inventory() {
           }
         );
 
-        if (!response.ok) throw new Error("Failed to fetch entries");
+        if (!response.ok) {
+          throw new Error("Failed to fetch entries");
+        }
 
         const data = await response.json();
-        setRows(data);
 
-        // setFilteredEntries(data);
+        setRows(data);
         setIsLoading(false);
+
       } catch (err) {
-        // setError(err.message);
-        // setSnackbarMessage(err.message); // Set error message for Snackbar
-        // setOpenSnackbar(true); // Show Snackbar with error message
-        // setLoading(false);
+        console.log(err);
       }
     }
-    if (token) {
-      fetchInventory();
-    }
-  }, [token]);
+
+    fetchInventory();
+  }
+
+}, [token, limit]);
+
+
   useEffect(() => {
     async function fetchUomData() {
       try {

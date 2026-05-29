@@ -8,9 +8,19 @@ const knex = knexLib(knexConfig);
 
 export async function getAllInventory(req, res) {
   try {
+
+  const { limit, offset } = req.query;
+
+    //  get total count
+    const [{ total }] = await knex("inventory")
+      .where("is_deleted", false)
+      .count("inventory_id as total");
+
     const inventoryItems = await knex("inventory")
       .where("is_deleted", false)
-      .select("*");
+      .select("*")
+      .limit(parseInt(limit))
+      .offset(parseInt(offset));
 
     // const { limit = 10, offset = 0 } = req.query;
 
@@ -80,7 +90,17 @@ export async function getAllInventory(req, res) {
       };
     });
 
-    res.status(200).json(formattedItems);
+    // res.status(200).json(formattedItems);
+
+// return with total
+    res.status(200).json({
+      total: parseInt(total),
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      data: formattedItems,
+    });
+
+
   } catch (error) {
     res.status(500).json({
       error: "Error fetching inventory items",
@@ -88,6 +108,8 @@ export async function getAllInventory(req, res) {
     });
   }
 }
+
+
 
 export async function getInventoryExcelDownload(req, res) {
   try {

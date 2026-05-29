@@ -13,64 +13,89 @@ export async function fetchEntries(
   setLoading,
   setOpenSnackbar,
   setSnackbarMessage,
-  setSnackbarSeverity
+  setSnackbarSeverity,
+  startDate,
+  endDate,
+  limit = 20,
+  offset = 0,
+  append = false
 ) {
   try {
     if (!token) {
       setOpenSnackbar(true);
-      setSnackbarMessage(
-        "Unauthorized. Please log in with appropriate user credentials."
-      );
+      setSnackbarMessage("Unauthorized. Please log in with appropriate user credentials.");
       setSnackbarSeverity("error");
       setLoading(false);
-      return;
+      return { data: [], total: 0 };
     }
 
+    const params = new URLSearchParams();
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+    ["scheduled", "released"].forEach((s) => params.append("status", s));
+    params.append("limit", limit);
+    params.append("offset", offset);
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/appointment`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      `${process.env.NEXT_PUBLIC_API_URL}/appointment?${params.toString()}`,
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
     if (!response.ok) throw new Error("Failed to fetch entries");
 
-    const data = await response.json();
-    // console.log(data)
+    const json = await response.json();
+    const rawData = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+    const total = json.total ?? rawData.length;
 
-    const filteredData = data.filter((entry) => {
-      // Filter by status
+    // ✅ filter valid services
+    const filteredData = rawData.filter((entry) => {
       const validStatus = entry.status === "scheduled" || entry.status === "released";
-
       if (!validStatus) return false;
-
-      // Filter out appointments where all services have null or empty service_description
-      if (!entry.services_actual || entry.services_actual.length === 0) {
-        return false;
-      }
-
-      // Check if at least one service has a non-empty service_description
-      const hasValidService = entry.services_actual.some(
-        (service) => service.service_description && service.service_description.trim() !== ""
+      if (!entry.services_actual || entry.services_actual.length === 0) return false;
+      return entry.services_actual.some(
+        (s) => s.service_description && s.service_description.trim() !== ""
       );
-
-      return hasValidService;
     });
 
-    // console.log("Filtered Data:", filteredData);
+  //  after — deduplicate by appointment_id
+if (append) {
+  setEntries((prev) => {
+    const existingIds = new Set(prev.map((e) => e.appointment_id));
+    const unique = filteredData.filter((e) => !existingIds.has(e.appointment_id));
+    return [...prev, ...unique];
+  });
+  setFilteredEntries((prev) => {
+    const existingIds = new Set(prev.map((e) => e.appointment_id));
+    const unique = filteredData.filter((e) => !existingIds.has(e.appointment_id));
+    return [...prev, ...unique];
+  });
+} else {
+  setEntries(filteredData);
+  setFilteredEntries(filteredData);
+}
 
-    setEntries(filteredData);
-    setFilteredEntries(filteredData);
     setLoading(false);
+    return { data: filteredData, total };
+
   } catch (err) {
     setOpenSnackbar(true);
     setSnackbarMessage(err.message);
     setSnackbarSeverity("error");
     setLoading(false);
+    return { data: [], total: 0 };
   }
 }
+
+
+export const handleScrollToTop = () => {
+  const container = document.getElementById("scrollable-table");
+  if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+export const scrollToTopButtonDisplay = (event, setShowFab) => {
+  const { scrollTop } = event.target;
+  setShowFab(scrollTop > 10);
+};
 
 export const handleSearchChange = (event, setSearchText) => {
   setSearchText(event.target.value);
