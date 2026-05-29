@@ -132,9 +132,8 @@ export default function CustomerDetail() {
   const [openEditModal, setOpenEditModal] = useState(false);
 
   const [isExistingCustomer, setIsExistingCustomer] = useState(false);
-    const [vehicleMake, setVehicleMake] = useState("");
-   const [vehicleModel, setVehicleModel] = useState("");
-
+  const [vehicleMake, setVehicleMake] = useState("");
+  const [vehicleModel, setVehicleModel] = useState("");
 
   const [companyDetails, setCompanyDetails] = useState([]);
   const [printMenuAnchor, setPrintMenuAnchor] = useState(null);
@@ -170,7 +169,7 @@ export default function CustomerDetail() {
       );
       if (!response.ok) throw new Error("Failed to fetch inventory data");
       const data = await response.json();
-      setInventory(data);
+      setInventory(Array.isArray(inventoryData.data) ? inventoryData.data : []); // ✅ FIXED // ✅ FIXED
     } catch (error) {
       console.log("Error fetching inventory data:", error);
     }
@@ -321,15 +320,11 @@ export default function CustomerDetail() {
         const customerId = appointmentData.customer_id;
         const vehicleId = appointmentData.vehicle_id;
 
- const formattedDate = appointmentData.invoice_date
-      ? appointmentData.invoice_date.split("-").reverse().join("/")
-      : "";
-    setinvoice_date(formattedDate);
+        const formattedDate = appointmentData.invoice_date
+          ? appointmentData.invoice_date.split("-").reverse().join("/")
+          : "";
+        setinvoice_date(formattedDate);
 
-
-
-        // const fetched_invoice_date = appointmentData.invoice_date;
-        // setinvoice_date(fetched_invoice_date);
         setVehicleId(vehicleId);
         console.log("Inventory Data:", vehicleId);
         if (appointmentData.km != undefined) {
@@ -379,15 +374,15 @@ export default function CustomerDetail() {
           appointment_id: appointmentId,
         });
 
-        setInventory(inventoryData);
+  setInventory(Array.isArray(inventoryData.data) ? inventoryData.data : []);  // ✅ FIXED
         setAppointmentDataLog(appointmentData);
-       const matchedVehicle = customerData.vehicles?.find(
-  (v) => v.vehicle_id === vehicleId
-) || customerData.vehicles?.[0];
 
-setVehicleMake(matchedVehicle?.make || "");
-setVehicleModel(matchedVehicle?.model || "");
+        const matchedVehicle =
+          customerData.vehicles?.find((v) => v.vehicle_id === vehicleId) ||
+          customerData.vehicles?.[0];
 
+        setVehicleMake(matchedVehicle?.make || "");
+        setVehicleModel(matchedVehicle?.model || "");
 
         if (
           appointmentData.services_actual &&
@@ -462,7 +457,8 @@ setVehicleModel(matchedVehicle?.model || "");
 
   const { grandTotal, totalTax, overallTotal } = calculateTotals();
 
-  //   FIXED: accepts passedInvoiceDate to avoid React state timing issues
+  const safeInventory = Array.isArray(inventory) ? inventory : []; // ✅ FIXED - one safe reference used everywhere below
+
   const generatePDF = async (mode = "download", passedInvoiceDate = null) => {
     if (!estimateItems.some((item) => item.price > 0)) {
       showSnackbarAlert(
@@ -493,7 +489,7 @@ setVehicleModel(matchedVehicle?.model || "");
       if (checkData.invoice_id) {
         invoice_id = checkData.invoice_id;
         resolved_invoice_date = checkData.invoice_date;
-        setinvoice_date(checkData.invoice_date); //   sync state
+        setinvoice_date(checkData.invoice_date);
       } else {
         const generateResponse = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/appointment/generateinvoice/${appointmentId}`,
@@ -512,14 +508,10 @@ setVehicleModel(matchedVehicle?.model || "");
 
         const generateData = await generateResponse.json();
         invoice_id = generateData.invoice_id;
-
-
         resolved_invoice_date = generateData.invoice_date;
-        setinvoice_date(generateData.invoice_date); //
-     
+        setinvoice_date(generateData.invoice_date);
       }
 
-      //   prefer passedInvoiceDate (from validateAndPostService) over locally resolved one
       const finalInvoiceDate = passedInvoiceDate || resolved_invoice_date || invoice_date;
 
       await generatePDFInvoice({
@@ -536,7 +528,7 @@ setVehicleModel(matchedVehicle?.model || "");
         pdfFooterImage,
         pdfLogo,
         invoiceId: invoice_id,
-        invoiceDate: finalInvoiceDate, //   FIXED: no longer "sample"
+        invoiceDate: finalInvoiceDate,
         companyDetails,
         upi: upiDetails.pa,
         openInNewTab: mode === "newTab",
@@ -563,7 +555,7 @@ setVehicleModel(matchedVehicle?.model || "");
 
   const handleViewPDFInNewTab = async (passedInvoiceDate = null) => {
     handlePrintMenuClose();
-    await generatePDF("newTab", passedInvoiceDate); //   forward the date
+    await generatePDF("newTab", passedInvoiceDate);
   };
 
   const addEstimateItem = () => {
@@ -692,7 +684,6 @@ setVehicleModel(matchedVehicle?.model || "");
   }, [estimateItems]);
 
   const handleSpareListChange = (index, value) => {
-    // Check if this spare item already exists in the list (excluding current row)
     const isDuplicate = estimateItems.some(
       (item, itemIndex) =>
         itemIndex !== index &&
@@ -708,7 +699,7 @@ setVehicleModel(matchedVehicle?.model || "");
       return;
     }
 
-    const selectedItem = inventory.find((item) => item.part_name === value);
+    const selectedItem = safeInventory.find((item) => item.part_name === value); // ✅ FIXED
     if (selectedItem) {
       updateEstimateItem(index, "spareList", value);
       updateEstimateItem(index, "price", selectedItem.price);
@@ -728,18 +719,17 @@ setVehicleModel(matchedVehicle?.model || "");
   };
 
   const getFilteredInventory = (type) => {
-    return inventory.filter(
+    return safeInventory.filter( // ✅ FIXED
       (item) => item.category?.toLowerCase() === type?.toLowerCase(),
     );
   };
 
-  // compute a deduplicated list of product names (trimmed) for autocomplete
   const productOptions = useMemo(() => {
     const seen = new Set();
     const opts = [];
+    if (!Array.isArray(inventory)) return opts; // ✅ FIXED
     inventory.forEach((item) => {
       let name = item.part_name || "";
-      // collapse whitespace and trim
       name = name.replace(/\s+/g, " ").trim();
       if (name && !seen.has(name)) {
         seen.add(name);
@@ -766,7 +756,6 @@ setVehicleModel(matchedVehicle?.model || "");
     }
   };
 
-  //   FIXED: now returns captured_invoice_date so callers can pass it directly to generatePDF
   const validateAndPostService = async (
     serviceType,
     appointmentDataLog,
@@ -789,13 +778,11 @@ setVehicleModel(matchedVehicle?.model || "");
       (item) => item.spareList && item.qty > 0 && item.price > 0,
     );
 
-    // Check if there are any items with spares
     if (validItems.length === 0) {
       showSnackbarAlert("Please add Products, Products can't be Blank", "error");
       return;
     }
 
-    // Check for duplicate items (same spareList)
     const spareListNames = validItems.map((item) =>
       item.spareList.trim().toLowerCase(),
     );
@@ -814,7 +801,6 @@ setVehicleModel(matchedVehicle?.model || "");
         appointmentDataLog.services_actual.length > 0 ? "approved" : "released";
     }
 
-    //   captures invoice_date to return at the end
     let captured_invoice_date = null;
 
     try {
@@ -833,8 +819,8 @@ setVehicleModel(matchedVehicle?.model || "");
 
       if (checkData.invoice_id) {
         appointmentDataLog.invoice_id = checkData.invoice_id;
-        captured_invoice_date = checkData.invoice_date; //   capture it
-        setinvoice_date(checkData.invoice_date);         //   sync state
+        captured_invoice_date = checkData.invoice_date;
+        setinvoice_date(checkData.invoice_date);
       } else {
         const generateResponse = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/appointment/generateinvoice/${appointmentId}`,
@@ -853,8 +839,8 @@ setVehicleModel(matchedVehicle?.model || "");
 
         const generateData = await generateResponse.json();
         appointmentDataLog.invoice_id = generateData.invoice_id;
-        captured_invoice_date = generateData.invoice_date; //   capture it
-        setinvoice_date(generateData.invoice_date);         //   sync state
+        captured_invoice_date = generateData.invoice_date;
+        setinvoice_date(generateData.invoice_date);
       }
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -869,7 +855,7 @@ setVehicleModel(matchedVehicle?.model || "");
         vehicle_id: appointmentDataLog.vehicle_id,
         items_required: [
           {
-            item_id: inventory.find(
+            item_id: safeInventory.find( // ✅ FIXED
               (invItem) => invItem.part_name === item.spareList,
             )?.inventory_id,
             item_name: item.spareList,
@@ -884,14 +870,12 @@ setVehicleModel(matchedVehicle?.model || "");
         invoice_id: appointmentDataLog.invoice_id,
       };
 
-      // Add payment information based on payment mode
       if (paymentMode === "credit") {
         serviceObj.invoice_amount = overallTotal;
       } else if (paymentMode === "cash") {
         serviceObj.paid_amount = overallTotal;
       }
 
-      // Add payment mode to the first service object for backend reference
       if (index === 0) {
         serviceObj.paymentMode = paymentMode;
       }
@@ -914,11 +898,9 @@ setVehicleModel(matchedVehicle?.model || "");
 
       if (!response.ok) throw new Error(`Failed to post to ${serviceType}`);
 
-      // Parse response to get new service IDs
       const responseServiceData = await response.json();
       console.log("Service response data:", responseServiceData);
 
-      // Update estimateItems with new service IDs from backend response
       if (responseServiceData && Array.isArray(responseServiceData)) {
         const updatedEstimateItems = estimateItems.map((item, index) => {
           if (
@@ -941,12 +923,9 @@ setVehicleModel(matchedVehicle?.model || "");
           : `Appointment ${appointmentId} updated successfully`,
       );
 
-      // Trigger data reload to prevent duplicates
       setnewdata(Math.random());
 
-      setTimeout(() => {
-        // window.location.reload();
-      }, 2000);
+      setTimeout(() => {}, 2000);
 
       if (type === "save") {
         setSaveButtonClicked(true);
@@ -957,21 +936,20 @@ setVehicleModel(matchedVehicle?.model || "");
       throw error;
     }
 
-    //   return captured_invoice_date so the caller can pass it directly to generatePDF
     return captured_invoice_date;
   };
 
   const itemsToProcure = estimateItems
     .map((item) => {
       const stockQuantity =
-        inventory.find((invItem) => invItem.part_name === item.spareList)
+        safeInventory.find((invItem) => invItem.part_name === item.spareList) // ✅ FIXED
           ?.quantity || 0;
       const requiredQuantity =
         item.qty > stockQuantity ? item.qty - stockQuantity : 0;
       return {
         ...item,
         qty: requiredQuantity,
-        item_id: inventory.find(
+        item_id: safeInventory.find( // ✅ FIXED
           (invItem) => invItem.part_name === item.spareList,
         )?.inventory_id,
       };
@@ -1194,7 +1172,6 @@ setVehicleModel(matchedVehicle?.model || "");
       return;
     }
 
-    // Duplicate check
     const isDuplicate = estimateItems.some(
       (item) =>
         item.spareList &&
@@ -1209,12 +1186,12 @@ setVehicleModel(matchedVehicle?.model || "");
       return;
     }
 
-    if (!inventory || inventory.length === 0) {
+    if (!safeInventory || safeInventory.length === 0) { // ✅ FIXED
       showSnackbarAlert("Inventory not loaded yet. Please wait.", "warning");
       return;
     }
 
-    const selectedItem = inventory.find(
+    const selectedItem = safeInventory.find( // ✅ FIXED
       (item) => item.part_name === productName,
     );
 
@@ -1244,7 +1221,7 @@ setVehicleModel(matchedVehicle?.model || "");
     }
   };
 
-  const pageType = Cookies.get("page_type"); // "tab" or others
+  const pageType = Cookies.get("page_type");
 
   return (
     <div>
@@ -1415,7 +1392,7 @@ setVehicleModel(matchedVehicle?.model || "");
               </Box>
             </Paper>
 
-            {/* PRODUCT ENTRY SECTION - Add Product */}
+            {/* PRODUCT ENTRY SECTION */}
             <Paper
               elevation={0}
               sx={{ p: 1, backgroundColor: "rgba(255,255,255,0.95)" }}
@@ -1458,7 +1435,7 @@ setVehicleModel(matchedVehicle?.model || "");
                     onChange={(e, newValue) => {
                       setHeaderProductName(newValue || "");
                       if (newValue) {
-                        const selectedItem = inventory.find(
+                        const selectedItem = safeInventory.find( // ✅ FIXED
                           (item) => item.part_name?.trim() === newValue?.trim(),
                         );
                         if (selectedItem) {
@@ -1467,9 +1444,7 @@ setVehicleModel(matchedVehicle?.model || "");
                       }
                     }}
                     sx={{
-                      "& .MuiInputBase-root": {
-                        height: 40,
-                      },
+                      "& .MuiInputBase-root": { height: 40 },
                       "& .MuiOutlinedInput-input": {
                         padding: "8px 10px",
                         fontSize: "0.85rem",
@@ -1510,7 +1485,6 @@ setVehicleModel(matchedVehicle?.model || "");
                   />
                 </Box>
 
-                {/* Qty */}
                 <Box>
                   <Typography
                     variant="caption"
@@ -1524,7 +1498,6 @@ setVehicleModel(matchedVehicle?.model || "");
                   >
                     Qty
                   </Typography>
-
                   <TextField
                     size="small"
                     type="number"
@@ -1541,7 +1514,6 @@ setVehicleModel(matchedVehicle?.model || "");
                   />
                 </Box>
 
-                {/* Rate */}
                 <Box>
                   <Typography
                     variant="caption"
@@ -1555,7 +1527,6 @@ setVehicleModel(matchedVehicle?.model || "");
                   >
                     Rate
                   </Typography>
-
                   <TextField
                     size="small"
                     type="number"
@@ -1584,16 +1555,12 @@ setVehicleModel(matchedVehicle?.model || "");
                   >
                     GST
                   </Typography>
-
                   <FormControl size="small" fullWidth>
                     <Select
                       value={headerGst}
                       onChange={(e) => setHeaderGst(e.target.value)}
                       onKeyDown={handleHeaderKeyPress}
-                      sx={{
-                        height: 40,
-                        fontSize: "0.85rem",
-                      }}
+                      sx={{ height: 40, fontSize: "0.85rem" }}
                     >
                       <MenuItem value="">
                         <Typography sx={{ fontSize: "0.85rem" }}>
@@ -1603,7 +1570,7 @@ setVehicleModel(matchedVehicle?.model || "");
                       {gstOptions.map((gst) => (
                         <MenuItem key={gst.id} value={gst.gst_percentage}>
                           <Typography sx={{ fontSize: "0.85rem" }}>
-                            {gst.gst_percentage}%{" "}
+                            {gst.gst_percentage}%
                           </Typography>
                         </MenuItem>
                       ))}
@@ -1611,7 +1578,6 @@ setVehicleModel(matchedVehicle?.model || "");
                   </FormControl>
                 </Box>
 
-                {/* Add Button */}
                 <Button
                   variant="contained"
                   color="primary"
@@ -1646,7 +1612,6 @@ setVehicleModel(matchedVehicle?.model || "");
                   }}
                 >
                   <Box display="flex" gap={0.5}>
-                    {/*   FIXED: Print button now passes invoice_date directly */}
                     <Button
                       variant="contained"
                       color="primary"
@@ -1658,7 +1623,7 @@ setVehicleModel(matchedVehicle?.model || "");
                             appointmentDataLog,
                             "save",
                           );
-                          await generatePDF("newTab", inv_date); //   pass date directly
+                          await generatePDF("newTab", inv_date);
                         } catch (error) {
                           console.error(error);
                         }
@@ -1687,10 +1652,10 @@ setVehicleModel(matchedVehicle?.model || "");
                     </Menu>
 
                     {Array.isArray(appointmentDataLog.services_actual) &&
-                      appointmentDataLog.services_actual.length > 0 &&
-                      appointmentDataLog.services_actual.some(
-                        (service) => service.service_id,
-                      ) ? (
+                    appointmentDataLog.services_actual.length > 0 &&
+                    appointmentDataLog.services_actual.some(
+                      (service) => service.service_id,
+                    ) ? (
                       <Button
                         disabled={updateButtonClicked}
                         variant="contained"
@@ -1704,9 +1669,7 @@ setVehicleModel(matchedVehicle?.model || "");
                               appointmentDataLog,
                               "update",
                             );
-                          } catch (error) {
-                            /* handle error */
-                          }
+                          } catch (error) {}
                         }}
                         sx={{
                           fontSize: "0.7rem",
@@ -1779,80 +1742,48 @@ setVehicleModel(matchedVehicle?.model || "");
                         <TableRow sx={{ height: "28px" }}>
                           <TableCell
                             align="center"
-                            sx={{
-                              fontWeight: "bold",
-                              padding: "4px",
-                              fontSize: "0.75rem",
-                            }}
+                            sx={{ fontWeight: "bold", padding: "4px", fontSize: "0.75rem" }}
                           >
                             No
                           </TableCell>
                           <TableCell
-                            sx={{
-                              fontWeight: "bold",
-                              padding: "4px",
-                              fontSize: "0.75rem",
-                            }}
+                            sx={{ fontWeight: "bold", padding: "4px", fontSize: "0.75rem" }}
                           >
                             Product
                           </TableCell>
                           <TableCell
                             align="center"
-                            sx={{
-                              fontWeight: "bold",
-                              padding: "4px",
-                              fontSize: "0.75rem",
-                            }}
+                            sx={{ fontWeight: "bold", padding: "4px", fontSize: "0.75rem" }}
                           >
                             Qty
                           </TableCell>
                           <TableCell
                             align="center"
-                            sx={{
-                              fontWeight: "bold",
-                              padding: "4px",
-                              fontSize: "0.75rem",
-                            }}
+                            sx={{ fontWeight: "bold", padding: "4px", fontSize: "0.75rem" }}
                           >
                             Unit
                           </TableCell>
                           <TableCell
                             align="center"
-                            sx={{
-                              fontWeight: "bold",
-                              padding: "4px",
-                              fontSize: "0.75rem",
-                            }}
+                            sx={{ fontWeight: "bold", padding: "4px", fontSize: "0.75rem" }}
                           >
                             Rate
                           </TableCell>
                           <TableCell
                             align="center"
-                            sx={{
-                              fontWeight: "bold",
-                              padding: "4px",
-                              fontSize: "0.75rem",
-                            }}
+                            sx={{ fontWeight: "bold", padding: "4px", fontSize: "0.75rem" }}
                           >
                             gst
                           </TableCell>
                           <TableCell
                             align="center"
-                            sx={{
-                              fontWeight: "bold",
-                              padding: "4px",
-                              fontSize: "0.75rem",
-                            }}
+                            sx={{ fontWeight: "bold", padding: "4px", fontSize: "0.75rem" }}
                           >
                             Amount
                           </TableCell>
                           <TableCell
                             align="center"
-                            sx={{
-                              fontWeight: "bold",
-                              padding: "4px",
-                              fontSize: "0.75rem",
-                            }}
+                            sx={{ fontWeight: "bold", padding: "4px", fontSize: "0.75rem" }}
                           >
                             Act
                           </TableCell>
@@ -1863,7 +1794,7 @@ setVehicleModel(matchedVehicle?.model || "");
                         {estimateItems
                           .filter((item) => item.spareList)
                           .map((item, filteredIndex) => {
-                            const selectedItem = inventory.find(
+                            const selectedItem = safeInventory.find( // ✅ FIXED
                               (invItem) => invItem.part_name === item.spareList,
                             );
 
@@ -1876,9 +1807,7 @@ setVehicleModel(matchedVehicle?.model || "");
                                 key={filteredIndex}
                                 sx={{
                                   backgroundColor:
-                                    filteredIndex % 2 === 0
-                                      ? "#f9f9f9"
-                                      : "white",
+                                    filteredIndex % 2 === 0 ? "#f9f9f9" : "white",
                                   height: "28px",
                                 }}
                               >
@@ -1917,16 +1846,12 @@ setVehicleModel(matchedVehicle?.model || "");
                                             {...params}
                                             size="small"
                                             sx={{
-                                              "& input": {
-                                                fontSize: "0.75rem",
-                                              },
+                                              "& input": { fontSize: "0.75rem" },
                                             }}
                                           />
                                         )}
                                         noOptionsText={
-                                          <Box
-                                            sx={{ p: 1, textAlign: "center" }}
-                                          >
+                                          <Box sx={{ p: 1, textAlign: "center" }}>
                                             <Typography
                                               variant="caption"
                                               sx={{ display: "block", mb: 1 }}
@@ -1942,16 +1867,10 @@ setVehicleModel(matchedVehicle?.model || "");
                                                 setProductType("Services");
                                                 setOpenAddProductModal(true);
                                               }}
-                                              sx={{
-                                                fontSize: "0.65rem",
-                                                py: 0.5,
-                                              }}
+                                              sx={{ fontSize: "0.65rem", py: 0.5 }}
                                             >
                                               <AddIcon
-                                                sx={{
-                                                  fontSize: "14px",
-                                                  mr: 0.5,
-                                                }}
+                                                sx={{ fontSize: "14px", mr: 0.5 }}
                                               />
                                               Add Product
                                             </Button>
@@ -1965,10 +1884,7 @@ setVehicleModel(matchedVehicle?.model || "");
                                     </Typography>
                                   )}
                                 </TableCell>
-                                <TableCell
-                                  align="center"
-                                  sx={{ padding: "4px" }}
-                                >
+                                <TableCell align="center" sx={{ padding: "4px" }}>
                                   <TextField
                                     size="small"
                                     type="number"
@@ -1993,19 +1909,12 @@ setVehicleModel(matchedVehicle?.model || "");
                                     }}
                                   />
                                 </TableCell>
-
-                                <TableCell
-                                  align="center"
-                                  sx={{ padding: "4px" }}
-                                >
+                                <TableCell align="center" sx={{ padding: "4px" }}>
                                   <Typography sx={{ fontSize: "0.7rem" }}>
                                     {selectedItem?.uom || "Pcs"}
                                   </Typography>
                                 </TableCell>
-                                <TableCell
-                                  align="center"
-                                  sx={{ padding: "4px" }}
-                                >
+                                <TableCell align="center" sx={{ padding: "4px" }}>
                                   <TextField
                                     size="small"
                                     type="number"
@@ -2029,15 +1938,9 @@ setVehicleModel(matchedVehicle?.model || "");
                                     }}
                                   />
                                 </TableCell>
-                                <TableCell
-                                  align="center"
-                                  sx={{ padding: "4px" }}
-                                >
+                                <TableCell align="center" sx={{ padding: "4px" }}>
                                   {isTableEditMode ? (
-                                    <FormControl
-                                      size="small"
-                                      sx={{ width: "70px" }}
-                                    >
+                                    <FormControl size="small" sx={{ width: "70px" }}>
                                       <Select
                                         value={item.tax}
                                         onChange={(e) => {
@@ -2056,9 +1959,7 @@ setVehicleModel(matchedVehicle?.model || "");
                                         }}
                                       >
                                         <MenuItem value="">
-                                          <Typography
-                                            sx={{ fontSize: "0.75rem" }}
-                                          >
+                                          <Typography sx={{ fontSize: "0.75rem" }}>
                                             Select
                                           </Typography>
                                         </MenuItem>
@@ -2067,9 +1968,7 @@ setVehicleModel(matchedVehicle?.model || "");
                                             key={gst.id}
                                             value={gst.gst_percentage}
                                           >
-                                            <Typography
-                                              sx={{ fontSize: "0.75rem" }}
-                                            >
+                                            <Typography sx={{ fontSize: "0.75rem" }}>
                                               {gst.gst_percentage}%
                                             </Typography>
                                           </MenuItem>
@@ -2082,30 +1981,17 @@ setVehicleModel(matchedVehicle?.model || "");
                                     </Typography>
                                   )}
                                 </TableCell>
-                                <TableCell
-                                  align="center"
-                                  sx={{ padding: "4px" }}
-                                >
+                                <TableCell align="center" sx={{ padding: "4px" }}>
                                   <Typography
-                                    sx={{
-                                      fontWeight: "bold",
-                                      fontSize: "0.75rem",
-                                    }}
+                                    sx={{ fontWeight: "bold", fontSize: "0.75rem" }}
                                   >
-                                    {parseFloat(item.estimatedAmount).toFixed(
-                                      2,
-                                    )}
+                                    {parseFloat(item.estimatedAmount).toFixed(2)}
                                   </Typography>
                                 </TableCell>
-                                <TableCell
-                                  align="center"
-                                  sx={{ padding: "2px" }}
-                                >
+                                <TableCell align="center" sx={{ padding: "2px" }}>
                                   <IconButton
                                     size="small"
-                                    onClick={() =>
-                                      handleDeleteClick(originalIndex)
-                                    }
+                                    onClick={() => handleDeleteClick(originalIndex)}
                                     sx={{ padding: "2px" }}
                                     title="Delete"
                                   >
@@ -2156,7 +2042,6 @@ setVehicleModel(matchedVehicle?.model || "");
           customer={customer}
           onSuccess={() => {
             setOpenEditModal(false);
-            // window.location.reload();
           }}
         />
       </Box>

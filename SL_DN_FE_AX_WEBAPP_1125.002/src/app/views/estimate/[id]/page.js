@@ -348,7 +348,8 @@ const [appointmentDate,setAppointmentDate] = useState("");
 
         setCustomer(customerData);
         setVehicleId(vehicleId);
-        setInventory(inventoryData);
+        // setInventory(inventoryData);
+        setInventory(Array.isArray(inventoryData.data) ? inventoryData.data : []);
         setAppointmentDataLog(appointmentData);
         appointmentLoadedRef.current = true;
 
@@ -1670,6 +1671,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
   };
 
   // Calculate itemsToProcure for rendering // include item_id
+  const safeInventory = Array.isArray(inventory) ? inventory : [];
   const itemsToProcure = estimateItems
     .map((item) => {
       const stockQuantity =
@@ -1768,7 +1770,8 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
       );
       if (!response.ok) throw new Error("Failed to fetch inventory");
       const data = await response.json();
-      setInventory(data);
+      // setInventory(data);
+      setInventory(Array.isArray(data.data) ? data.data : []);
     } catch (error) {
       console.log("Error fetching inventory:", error);
     }
@@ -2168,6 +2171,7 @@ console.log("formattedDate_appoinment_date", formattedDate_appoinment_date);
           apptData.services_actual || apptData.services || [];
 
         // Build procurement items from the returned services
+        
         const itemsToProcureFromResponse = returnedServices
           .flatMap((service) =>
             (service.items_required || []).map((item) => ({
