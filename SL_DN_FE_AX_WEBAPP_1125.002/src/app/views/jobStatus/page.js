@@ -333,9 +333,9 @@ export default function JobStatus() {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {groupedEntries[status].map((tile) => (
+                          {groupedEntries[status].map((tile,index) => (
                             <TableRow
-                              key={tile._id}
+                               key={`${tile._id}-${index}`}
                               hover
                               sx={{ cursor: "pointer" }}
                               onClick={() => router.push(`/views/jobStatus/${tile.appointment_id}`)}
