@@ -4,7 +4,25 @@ import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import dayjs from "dayjs";
 import axios from "axios";
-import { Tabs, Tab, Box, Select, MenuItem, FormControl, InputLabel, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+// import { Tabs, Tab, Box, Select, MenuItem, FormControl, InputLabel, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import {
+  Box,
+  Select,
+  MenuItem,
+  Button,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
+
 import DynamicListTable from "@/components/DynamicListTable.js";
 import Navbar from "@/components/navbar.js";
 import BulkGSTConversion from "@/components/BulkGSTConversion.js";
@@ -24,11 +42,12 @@ export default function GSTInvoice() {
   const [searchText, setSearchText] = useState("");
   const [pageType, setPageType] = useState(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
-  const [activeTab, setActiveTab] = useState(0);
+  // const [activeTab, setActiveTab] = useState(0);
   const [gstFilter, setGstFilter] = useState("converted");
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [bulkDownloadModal, setBulkDownloadModal] = useState(false);
   const [bulkDownloadResults, setBulkDownloadResults] = useState(null);
+  const [bulkConvertModal, setBulkConvertModal] = useState(false);
 
   const formatDate = (date) => {
     const year = date.getFullYear();
@@ -49,32 +68,31 @@ export default function GSTInvoice() {
   });
 
   useEffect(() => {
-    const savedTab = localStorage.getItem("gstInvoiceActiveTab");
-    if (savedTab !== null) {
-      setActiveTab(parseInt(savedTab, 10));
-    }
+    // const savedTab = localStorage.getItem("gstInvoiceActiveTab");
+    // if (savedTab !== null) {
+    //   setActiveTab(parseInt(savedTab, 10));
+    // }
 
     const storedToken = Cookies.get("token");
     setToken(storedToken);
     setPageType(Cookies.get("page_type"));
 
-    fetchEntries(
-      storedToken,
-      (data) => {
-        setEntries(data);
-        setOriginalEntries(data);
-      },
-      setLoading,
-      setOpenSnackbar,
-      setSnackbarMessage,
-      setSnackBarSeverity,
-      startDate,
-      endDate,
-        "invoiced",
-  true
-      
-    );
-  }, [startDate, endDate]);
+   fetchEntries(
+  storedToken,
+  (data) => {
+    setEntries(data);
+    setOriginalEntries(data);
+  },
+  setLoading,
+  setOpenSnackbar,
+  setSnackbarMessage,
+  setSnackBarSeverity,
+  startDate,
+  endDate,
+  "invoiced",
+  gstFilter  //  sends "converted" or "all" directly
+);
+}, [startDate, endDate, gstFilter]); // ✅ add gstFilter
 
   useEffect(() => {
     const fetchInvoiceEntries = async () => {
@@ -242,16 +260,20 @@ export default function GSTInvoice() {
           console.log("Appointment Data:", appointmentData);
 
           // Transform services_actual to match PDF generator expectations
-          const transformedItems = (appointmentData.services_actual || []).map(service => ({
-            service_id: service.service_id || "",
-            spareList: service.items_required?.[0]?.item_name || "",
-            reportedIssue: service.service_description || "",
-            qty: Number(service.items_required?.[0]?.qty || service.qty || 0),
-            price: Number(service.price || 0),
-            discountType: "percentage",
-            estimatedAmount: Number(service.price || 0) * Number(service.items_required?.[0]?.qty || service.qty || 0),
-            tax: Number(service.items_required?.[0]?.tax || service.tax || 0),
-          }));
+           const transformedItems = (appointmentData.services_actual || []).map(
+            (service) => ({
+              service_id: service.service_id || "",
+              spareList: service.items_required?.[0]?.item_name || "",
+              reportedIssue: service.service_description || "",
+              qty: Number(service.items_required?.[0]?.qty || service.qty || 0),
+              price: Number(service.price || 0),
+              discountType: "percentage",
+              estimatedAmount:
+                Number(service.price || 0) *
+                Number(service.items_required?.[0]?.qty || service.qty || 0),
+              tax: Number(service.items_required?.[0]?.tax || service.tax || 0),
+            }),
+          );
 
           // Check for items with missing or 0% tax
           const invalidItems = transformedItems.filter((item) => {
@@ -407,18 +429,21 @@ export default function GSTInvoice() {
       setSnackBarSeverity(successCount > 0 ? "success" : "warning");
 
       // Set modal data
-      setBulkDownloadResults({
+     setBulkDownloadResults({
         totalEntries: filteredEntries.length,
         successCount,
         taxMissingCount,
         taxMissingAppointments,
-        entries: filteredEntries.map(entry => ({
+        entries: filteredEntries.map((entry) => ({
           appointment_id: entry.appointment_id,
           customer_name: entry.customer_name || entry.contact?.name || "N/A",
           invoice_amount: entry.invoice_amount || 0,
-          status: taxMissingAppointments.includes(entry.appointment_id) ? "Tax Missing" : "Downloaded",
+          status: taxMissingAppointments.includes(entry.appointment_id)
+            ? "Tax Missing"
+            : "Downloaded",
         })),
       });
+
       setBulkDownloadModal(true);
     } catch (error) {
       console.error("Error in bulk download:", error);
@@ -457,73 +482,107 @@ export default function GSTInvoice() {
         </Tabs>
       </Box> */}
 
-      {activeTab === 0 ? (
-        <DynamicListTable
-          title="GST Invoice"
-          columns={columns}
-          data={entries}
-          filteredData={isSearchMode ? entries : filteredEntries}
-          loading={loading}
-          showNavbar={false}
-          searchText={searchText}
-          onSearchChange={handleSearchChange}
-          onSearchSubmit={handleSearchSubmit}
-          onRowClick={handleRowClick}
-          dateFilters={[
-            {
-              label: "Start Date",
-              value: startDate,
-              onChange: (e) => setStartDate(e.target.value),
-            },
-            {
-              label: "End Date",
-              value: endDate,
-              onChange: (e) => setEndDate(e.target.value),
-            },
-          ]}
-          extraControls={[
-            <Select
-              key="gst-filter"
-              value={gstFilter}
-              onChange={(e) => setGstFilter(e.target.value)}
-              size="small"
-              sx={{
-                backgroundColor: "white",
-                borderRadius: 1,
-                minWidth: 140,
-              }}
-            >
-              <MenuItem value="converted">GST Converted</MenuItem>
-              <MenuItem value="all">All</MenuItem>
-            </Select>,
-            <Tooltip
-              title={filteredEntries.length > 0 ? `Appointments: ${filteredEntries.map(e => e.appointment_id).join(", ")}` : "No invoices available"}
-            >
-              <span>
-                <Button
-                  key="bulk-download"
-                  variant="contained"
-                  color="primary"
-                  onClick={handleBulkDownload}
-                  disabled={bulkDownloading || filteredEntries.length === 0}
-                  size="small"
-                >
-                  {bulkDownloading ? "Downloading..." : `Bulk Download (${filteredEntries.length})`}
-                </Button>
-              </span>
-            </Tooltip>,
-          ]}
-          snackbar={{
-            open: openSnackbar,
-            message: snackbarMessage,
-            severity: snackBarSeverity,
-            onClose: () => setOpenSnackbar(false),
-          }}
-        />
-      ) : (
-        <BulkGSTConversion />
-      )}
-
+    
+      <DynamicListTable
+        title="GST Invoice"
+        columns={columns}
+        data={entries}
+        filteredData={isSearchMode ? entries : filteredEntries}
+        loading={loading}
+        showNavbar={false}
+        searchText={searchText}
+        onSearchChange={handleSearchChange}
+        onSearchSubmit={handleSearchSubmit}
+        onRowClick={handleRowClick}
+        dateFilters={[
+          {
+            label: "Start Date",
+            value: startDate,
+            onChange: (e) => setStartDate(e.target.value),
+          },
+          {
+            label: "End Date",
+            value: endDate,
+            onChange: (e) => setEndDate(e.target.value),
+          },
+        ]}
+        extraControls={[
+          <div style={{ display: "flex", gap: 16, justifyContent: "space-between" }}>
+            <div style={{ display: "flex", gap: 16}}>
+          <Button
+            key="bulk-convert"
+            variant="contained"
+            color="primary"
+            onClick={() => setBulkConvertModal(true)}
+            size="small"
+          >
+            Bulk Convert
+          </Button>
+          </div>
+          <div style={{ display: "flex", gap: 16 }}>
+          <Select
+            key="gst-filter"
+            value={gstFilter}
+            onChange={(e) => setGstFilter(e.target.value)}
+            size="small"
+            sx={{
+              backgroundColor: "white",
+              borderRadius: 1,
+              minWidth: 140,
+            }}
+          >
+            <MenuItem value="converted">GST Converted</MenuItem>
+            <MenuItem value="all">All</MenuItem>
+          </Select>
+          <Tooltip
+            title={
+              filteredEntries.length > 0
+                ? `Appointments: ${filteredEntries.map((e) => e.appointment_id).join(", ")}`
+                : "No invoices available"
+            }
+          >
+            <span>
+              <Button
+                key="bulk-download"
+                variant="contained"
+                color="primary"
+                onClick={handleBulkDownload}
+                disabled={bulkDownloading || filteredEntries.length === 0}
+                size="small"
+              >
+                {bulkDownloading
+                  ? "Downloading..."
+                  : `Bulk Download (${filteredEntries.length})`}
+              </Button>
+            </span>
+          </Tooltip>
+          </div>
+          </div>
+        ]}
+        snackbar={{
+          open: openSnackbar,
+          message: snackbarMessage,
+          severity: snackBarSeverity,
+          onClose: () => setOpenSnackbar(false),
+        }}
+      />
+      {/* Bulk Convert Modal */}
+      <Dialog
+        open={bulkConvertModal}
+        onClose={() => setBulkConvertModal(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Bulk GST Conversion</DialogTitle>
+        <DialogContent>
+          <BulkGSTConversion />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkConvertModal(false)} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* Bulk Download Results Modal */}
       <Dialog
         open={bulkDownloadModal}
@@ -531,13 +590,11 @@ export default function GSTInvoice() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          Bulk Download Summary
-        </DialogTitle>
+        <DialogTitle>Bulk Download Summary</DialogTitle>
         <DialogContent>
           {bulkDownloadResults && (
             <Box sx={{ pt: 2 }}>
-              <Box sx={{ mb: 3, display: 'flex', gap: 3 }}>
+              <Box sx={{ mb: 3, display: "flex", gap: 3 }}>
                 <Box>
                   <Typography variant="body2" color="textSecondary">
                     Total Invoices
@@ -550,7 +607,7 @@ export default function GSTInvoice() {
                   <Typography variant="body2" color="textSecondary">
                     Downloaded
                   </Typography>
-                  <Typography variant="h6" sx={{ color: 'success.main' }}>
+                  <Typography variant="h6" sx={{ color: "success.main" }}>
                     {bulkDownloadResults.successCount}
                   </Typography>
                 </Box>
@@ -558,7 +615,7 @@ export default function GSTInvoice() {
                   <Typography variant="body2" color="textSecondary">
                     Tax Issues
                   </Typography>
-                  <Typography variant="h6" sx={{ color: 'warning.main' }}>
+                  <Typography variant="h6" sx={{ color: "warning.main" }}>
                     {bulkDownloadResults.taxMissingCount}
                   </Typography>
                 </Box>
@@ -566,7 +623,7 @@ export default function GSTInvoice() {
 
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
                     <TableCell>Appointment ID</TableCell>
                     <TableCell>Customer Name</TableCell>
                     <TableCell align="right">Invoice Amount</TableCell>
@@ -577,21 +634,31 @@ export default function GSTInvoice() {
                   {bulkDownloadResults.entries.map((entry) => (
                     <TableRow
                       key={entry.appointment_id}
-                      onClick={() => window.open(`/views/gstInvoice/${entry.appointment_id}`, '_blank')}
+                      onClick={() =>
+                        window.open(
+                          `/views/gstInvoice/${entry.appointment_id}`,
+                          "_blank",
+                        )
+                      }
                       sx={{
-                        cursor: 'pointer',
-                        '&:hover': { backgroundColor: '#f5f5f5' }
+                        cursor: "pointer",
+                        "&:hover": { backgroundColor: "#f5f5f5" },
                       }}
                     >
                       <TableCell>{entry.appointment_id}</TableCell>
                       <TableCell>{entry.customer_name}</TableCell>
-                      <TableCell align="right">₹{entry.invoice_amount.toFixed(2)}</TableCell>
+                      <TableCell align="right">
+                        ₹{entry.invoice_amount.toFixed(2)}
+                      </TableCell>
                       <TableCell>
                         <Typography
                           variant="body2"
                           sx={{
-                            color: entry.status === 'Downloaded' ? 'success.main' : 'warning.main',
-                            fontWeight: 500
+                            color:
+                              entry.status === "Downloaded"
+                                ? "success.main"
+                                : "warning.main",
+                            fontWeight: 500,
                           }}
                         >
                           {entry.status}

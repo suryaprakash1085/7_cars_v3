@@ -385,8 +385,11 @@ export async function getAllAppointments(req, res) {
 
 export async function getAllAppointmentsForGST(req, res) {
   try {
-    let { startDate, endDate,status, include_gst } = req.query;
+    let { startDate, endDate,status, gstFilter,limit, offset } = req.query;
     console.log("Received query params:", { startDate, endDate });
+
+    const limitVal = parseInt(limit) || 50;   // default 50
+const offsetVal = parseInt(offset) || 0; 
     // For GET requests, only filter by company code if explicitly provided
     // Do NOT extract from token to avoid filtering based on token's company_code
     let companyCode = null;
@@ -539,12 +542,16 @@ export async function getAllAppointmentsForGST(req, res) {
   }
 
   //  GST filter
-if (include_gst === "true") {
+if (gstFilter === "converted") {
   builder.whereNotNull("appointment_to_invoice.gst_invoice_id");
+} else if (gstFilter === "all") {
+  builder.whereNotNull("appointment_to_invoice.invoice_id");
 }
 
       })
-      .orderBy("appointments.appointment_date", "desc");
+      .orderBy("appointments.appointment_date", "desc")
+      .limit(limitVal)
+      .offset(offsetVal);
 
     // Map appointments with services and items
     const formattedAppointments = [];

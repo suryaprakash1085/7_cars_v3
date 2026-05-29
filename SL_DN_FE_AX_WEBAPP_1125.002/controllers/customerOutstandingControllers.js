@@ -1,174 +1,110 @@
+
 const fetchData = async (
-  axios,
-  token,
-  setData,
-  setFilteredData,
-  updateStatus,
-  setOpenSnackbar,
-  setSnackbarMessage,
-  setSnackbarSeverity,
-  startDate,
-  endDate
+  axios, token, setData, setFilteredData, updateStatus,
+  setOpenSnackbar, setSnackbarMessage, setSnackbarSeverity,
+  startDate, endDate
 ) => {
   try {
-    let url = `${process.env.NEXT_PUBLIC_API_URL}/finance/transactions?type=customer`;
+    let url = `${process.env.NEXT_PUBLIC_API_URL}/finance/transactions?type=customer&status=debit&limit=20&offset=0`;
+    if (startDate) url += `&startdate=${startDate}`;
+    if (endDate) url += `&enddate=${endDate}`;
 
     const response = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     });
 
-    // First, fetch customer details
-    const customerResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/customer?limit=100000`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
+    const rawData = response.data.data;
 
-    // Fetch appointments to get latest appointment dates
-    let appointmentDateMap = {};
-    try {
-      const appointmentResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/appointment`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+    const transformedData = rawData.map((item) => ({
+      customer_id: item.customer_id,
+      customer: item.customer_name || "Unknown",
+      phone: item.phone || "",
+      invoiceDate: item.creation_date,
+      status: item.status,
+      advance_balance: 0,
+      invoiceAmount: parseFloat(item.debit || 0),
+      paidAmount: parseFloat(item.credit || 0),
+      expenseType: item.expense_type,
+      latestAppointmentDate: item.appointment_date || item.creation_date,
+    }));
 
-      // Create a map of latest appointment date per customer
-      if (Array.isArray(appointmentResponse.data)) {
-        appointmentResponse.data.forEach((appointment) => {
-          const customerId = appointment.customer_id;
-          const appointmentDate = appointment.appointment_date || appointment.invoice_date || appointment.created_at;
-
-          if (customerId && appointmentDate) {
-            const date = new Date(appointmentDate);
-            if (!appointmentDateMap[customerId] || new Date(appointmentDateMap[customerId]) < date) {
-              appointmentDateMap[customerId] = appointmentDate;
-            }
-          }
-        });
-      }
-      // console.log('Appointments loaded:', appointmentDateMap);
-    } catch (appointmentError) {
-      console.warn('Error fetching appointments, trying job cards:', appointmentError);
-      // Try to fetch from jobCard endpoint as fallback
-      try {
-        const jobCardResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/jobCard?limit=100000`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (Array.isArray(jobCardResponse.data)) {
-          jobCardResponse.data.forEach((jobCard) => {
-            const customerId = jobCard.customer_id;
-            const jobDate = jobCard.job_date || jobCard.created_at || jobCard.appointment_date;
-
-            if (customerId && jobDate) {
-              const date = new Date(jobDate);
-              if (!appointmentDateMap[customerId] || new Date(appointmentDateMap[customerId]) < date) {
-                appointmentDateMap[customerId] = jobDate;
-              }
-            }
-          });
-        }
-        // console.log('JobCard data loaded as fallback:', appointmentDateMap);
-      } catch (jobCardError) {
-        console.warn('Error fetching job cards as fallback:', jobCardError);
-      }
-    }
-
-    // Create a map of customer details
-    const customerMap = {};
-    customerResponse.data.forEach(customer => {
-      customerMap[customer.customer_id] = {
-        customer_name: customer.customer_name,
-        phone: customer.contact.phone
-      };
-    });
-
-    // Transform the data to match the expected format
-    const transformedData = response.data.data.map((item) => {
-      // Ensure creation_date is properly formatted
-      let latestDate = appointmentDateMap[item.customer_id] || item.creation_date;
-
-      // If no date is available, use today's date
-      if (!latestDate) {
-        latestDate = new Date().toISOString();
-      }
-
-      return {
-        customer_id: item.customer_id,
-        customer: customerMap[item.customer_id]?.customer_name || 'Unknown',
-        phone: customerMap[item.customer_id]?.phone || '',
-        invoiceDate: item.creation_date,
-        status: item.status,
-        advance_balance: 0,
-        invoiceAmount: parseFloat(item.debit || 0),
-        pendingAmount: parseFloat(item.debit || 0),
-        paidAmount: parseFloat(item.credit || 0),
-        latestAppointmentDate: latestDate
-      };
-    });
-
-    // Filter by date range BEFORE aggregating to ensure all transactions within range are included
-    let filteredByDate = transformedData;
-    if (startDate || endDate) {
-      filteredByDate = transformedData.filter((item) => {
-        let invoiceDate;
-        if (item.invoiceDate && typeof item.invoiceDate === 'string') {
-          if (item.invoiceDate.includes('-')) {
-            const parts = item.invoiceDate.split('-');
-            if (parts[0].length === 4) {
-              invoiceDate = new Date(item.invoiceDate);
-            } else {
-              invoiceDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-            }
-          } else if (item.invoiceDate.includes('/')) {
-            const parts = item.invoiceDate.split('/');
-            invoiceDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-          } else {
-            invoiceDate = new Date(item.invoiceDate);
-          }
-        } else {
-          invoiceDate = new Date(item.invoiceDate);
-        }
-
-        invoiceDate.setHours(0, 0, 0, 0);
-        const start = startDate ? new Date(startDate) : null;
-        const end = endDate ? new Date(endDate) : null;
-        if (start) start.setHours(0, 0, 0, 0);
-        if (end) end.setHours(0, 0, 0, 0);
-
-        if (start && end) {
-          return invoiceDate >= start && invoiceDate <= end;
-        } else if (start) {
-          return invoiceDate >= start;
-        } else if (end) {
-          return invoiceDate <= end;
-        }
-        return true;
-      });
-    }
-
-    // Then aggregate the filtered data
-    const aggregatedData = aggregateAppointments(filteredByDate);
+    const aggregatedData = aggregateAppointments(transformedData);
     const updatedData = updateStatus(aggregatedData);
     setData(updatedData);
-    setFilteredData(updatedData); // Show all data initially
+    setFilteredData(updatedData);
+
+    // ✅ return total for infinite scroll
+    return { total: response.data.total, data: updatedData };
 
   } catch (error) {
-    console.error('Error fetching data:', error);
+    console.error("Error fetching data:", error);
     setOpenSnackbar(true);
     setSnackbarMessage(error.message);
     setSnackbarSeverity("error");
+    return null;
   }
 };
+
+const fetchMoreData = async (
+  axios, token, offset, limit,
+  startDate, endDate, updateStatus,
+  setData, setFilteredData
+) => {
+  try {
+    let url = `${process.env.NEXT_PUBLIC_API_URL}/finance/transactions?type=customer&status=debit&limit=${limit}&offset=${offset}`;
+    if (startDate) url += `&startdate=${startDate}`;
+    if (endDate) url += `&enddate=${endDate}`;
+
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    });
+
+    const rawData = response.data.data;
+    const rawCount = rawData.length; // ✅ raw count before aggregation
+
+    const transformedData = rawData.map((item) => ({
+      customer_id: item.customer_id,
+      customer: item.customer_name || "Unknown",
+      phone: item.phone || "",
+      invoiceDate: item.creation_date,
+      status: item.status,
+      advance_balance: 0,
+      invoiceAmount: parseFloat(item.debit || 0),
+      paidAmount: parseFloat(item.credit || 0),
+      expenseType: item.expense_type,
+      latestAppointmentDate: item.appointment_date || item.creation_date,
+    }));
+
+    const aggregatedData = aggregateAppointments(transformedData);
+    const updatedData = updateStatus(aggregatedData);
+
+    setData((prev) => {
+      const existingIds = new Set(prev.map((e) => e.customer_id));
+      const unique = updatedData.filter((e) => !existingIds.has(e.customer_id));
+      return [...prev, ...unique];
+    });
+    setFilteredData((prev) => {
+      const existingIds = new Set(prev.map((e) => e.customer_id));
+      const unique = updatedData.filter((e) => !existingIds.has(e.customer_id));
+      return [...prev, ...unique];
+    });
+
+    return { total: response.data.total, rawCount }; // ✅ return rawCount
+  } catch (error) {
+    console.error("Error fetching more data:", error);
+    return null;
+  }
+};
+
+const handleScroll = (event, setShowFab, callback) => {
+  scrollToTopButtonDisplay(event, setShowFab);
+
+  const { scrollTop, scrollHeight, clientHeight } = event.target;
+  if (scrollHeight - scrollTop <= clientHeight + 200) {
+    callback(); // ✅ trigger load more
+  }
+};
+
 
 function aggregateAppointments(appointments) {
   const result = {};
@@ -394,4 +330,6 @@ export {
   updateCount,
   calculateDays,
   filterByDateRange,
+   fetchMoreData,
+   handleScroll,
 };

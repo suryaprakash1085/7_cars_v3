@@ -1,6 +1,6 @@
 "use client";
 // React and Next imports
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useRef  } from "react";
 import { useRouter } from 'next/navigation';
 import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 
@@ -13,6 +13,8 @@ import {
   updateCount,
   calculateDays,
   filterByDateRange,
+  handleScroll,
+  fetchMoreData,
 } from "../../../../controllers/customerOutstandingControllers";
 
 // Component imports
@@ -92,6 +94,13 @@ export default function CustomerOutstand() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
 
+  const loadingRef = useRef(false);
+const hasMoreRef = useRef(true);
+const totalRef = useRef(0);
+const offsetRef = useRef(0);
+const limitRef = useRef(20);
+const tokenRef = useRef("");
+
 
   // Set initial date range: start date = today - 1 week, end date = today
   useEffect(() => {
@@ -149,23 +158,31 @@ export default function CustomerOutstand() {
   };
 
   // Fetch data and update status
-  useEffect(() => {
-    let storedToken = Cookies.get("token");
-    setToken(storedToken);
+useEffect(() => {
+  let storedToken = Cookies.get("token");
+  setToken(storedToken);
+  tokenRef.current = storedToken;
 
-    fetchData(
-      axios,
-      storedToken,
-      setData,
-      setFilteredData,
-      updateStatus,
-      setOpenSnackbar,
-      setSnackbarMessage,
-      setSnackbarSeverity,
-      startDate,
-      endDate
-    );
-  }, [startDate, endDate]);
+  if (!startDate || !endDate) return;
+
+  // ✅ reset on date change
+  offsetRef.current = 0;
+  hasMoreRef.current = true;
+  loadingRef.current = false;
+
+  fetchData(
+    axios, storedToken, setData, setFilteredData, updateStatus,
+    setOpenSnackbar, setSnackbarMessage, setSnackbarSeverity,
+    startDate, endDate
+  ).then((result) => {
+    if (result) {
+      totalRef.current = result.total;
+      offsetRef.current = limitRef.current;
+      hasMoreRef.current = result.total > limitRef.current;
+    }
+  });
+}, [startDate, endDate]);
+
 
   // Calculate counts based on filtered data
   useEffect(() => {
@@ -209,6 +226,39 @@ export default function CustomerOutstand() {
       [index]: !prevState[index],
     }));
   };
+
+
+// add refs
+const startDateRef = useRef("");
+const endDateRef = useRef("");
+
+// sync refs
+useEffect(() => { startDateRef.current = startDate; }, [startDate]);
+useEffect(() => { endDateRef.current = endDate; }, [endDate]);
+
+// use refs in onTableScroll (not state values)
+const onTableScroll = (event) => {
+  handleScroll(event, setShowFab, () => {
+    if (!hasMoreRef.current || loadingRef.current) return;
+
+    loadingRef.current = true;
+
+    fetchMoreData(
+      axios, tokenRef.current,
+      offsetRef.current, limitRef.current,
+      startDateRef.current, endDateRef.current, // ✅ refs not state
+      updateStatus, setData, setFilteredData
+    ).then((result) => {
+      if (!result || result.rawCount === 0) {
+        hasMoreRef.current = false;
+      } else {
+        offsetRef.current += result.rawCount;
+        hasMoreRef.current = offsetRef.current < result.total;
+      }
+      loadingRef.current = false;
+    });
+  });
+};
 
   // Helper function to sort data by latest appointment date in descending order
   const sortByLatestDate = (dataToSort) => {
@@ -468,9 +518,7 @@ export default function CustomerOutstand() {
                 overflowY: "auto",
                 overflowX: "auto",
               }}
-              onScroll={(event) => {
-                scrollToTopButtonDisplay(event, setShowFab);
-              }}
+             onScroll={onTableScroll} 
             >
               <Table 
                 stickyHeader

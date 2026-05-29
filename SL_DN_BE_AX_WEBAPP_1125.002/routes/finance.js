@@ -348,54 +348,66 @@ router.get("/transactions", async (req, res) => {
     supplier_id,
     customer_id,
     transaction_type,
-    start_date,
-    end_date,
+    startdate,
+    enddate,
     type,
     searchText,
+    limit ,
+    offset,
+    status
   } = req.query;
 
   try {
     let query = knex("finance as f")
-      .leftJoin(
-        "appointments as a",
-        "f.appointment_id",
-        "a.appointment_id" //   CORRECT JOIN
-      )
+      .leftJoin("appointments as a", "f.appointment_id", "a.appointment_id")
+      .leftJoin("customers as c", "f.customer_id", "c.customer_id")
       .select(
         "f.*",
-        "a.payment_method"
+        "a.invoice_amount",
+        "a.appointment_date",
+        "a.payment_method",
+        "c.customer_name",
+        "c.phone"
       );
 
-    // Supplier filter
+    // ---------------- FILTERS ----------------
+
     if (supplier_id) {
       query.where("f.customer_id", supplier_id);
     }
 
-    // Customer filter
     if (customer_id) {
       query.where("f.customer_id", customer_id);
     }
 
-    // Transaction type
     if (transaction_type) {
       query.where("f.expense_type", transaction_type);
     }
 
-    // Finance type
     if (type) {
       query.where("f.type", type);
     }
+    // ADD HERE
+if (status === "debit") {
+  query.where("f.expense_type", "Debit");
+}
 
-    // Date filter
-    if (start_date && end_date) {
-      query.whereBetween("f.creation_date", [start_date, end_date]);
-    } else if (start_date) {
-      query.where("f.creation_date", ">=", start_date);
-    } else if (end_date) {
-      query.where("f.creation_date", "<=", end_date);
+if (status === "credit") {
+  query.where("f.expense_type", "Credit");
+}
+
+    // ---------------- DATE FILTER ----------------
+
+    if (startdate && enddate) {
+      query.whereBetween("a.appointment_date", [startdate, enddate]);
+    } else if (startdate) {
+      query.where("a.appointment_date", ">=", startdate);
+    } else if (enddate) {
+      query.where("a.appointment_date", "<=", enddate);
     }
 
-    // Search filter
+    // ---------------- SEARCH ----------------
+
     if (searchText) {
       query.where(function () {
         this.where("f.customer_id", "like", `%${searchText}%`)
@@ -403,19 +415,46 @@ router.get("/transactions", async (req, res) => {
           .orWhere("f.description", "like", `%${searchText}%`)
           .orWhere("f.expense_type", "like", `%${searchText}%`)
           .orWhere("f.type", "like", `%${searchText}%`)
-          .orWhere("a.payment_method", "like", `%${searchText}%`);
+          .orWhere("c.customer_name", "like", `%${searchText}%`)
+          .orWhere("c.phone", "like", `%${searchText}%`);
       });
     }
 
+    // ---------------- ORDER ----------------
+    query.orderBy("a.appointment_date", "desc");
+
+    // ---------------- LIMIT & OFFSET ----------------
+    query.limit(Number(limit)).offset(Number(offset));
+
+    // ---------------- EXECUTE ----------------
     const transactions = await query;
 
-    res.status(200).json({
+    // ---------------- TOTAL COUNT ----------------
+    const totalQuery = knex("finance as f")
+      .leftJoin("appointments as a", "f.appointment_id", "a.appointment_id");
+
+    if (type) {
+      totalQuery.where("f.type", type);
+    }
+
+    if (startdate && enddate) {
+      totalQuery.whereBetween("a.appointment_date", [startdate, enddate]);
+    }
+
+    const totalResult = await totalQuery.count("* as total").first();
+
+    return res.status(200).json({
       message: "Transactions fetched successfully",
+      total: totalResult.total,
+      limit: Number(limit),
+      offset: Number(offset),
       data: transactions,
     });
+
   } catch (error) {
     console.error("Error fetching transactions:", error.message);
-    res.status(500).json({
+
+    return res.status(500).json({
       message: "Error fetching transactions",
       error: error.message,
     });

@@ -215,7 +215,7 @@ export default function BulkGSTConversion({ pageType }) {
           </Typography>
 
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid item xs={12} sm={6} md={1.8}>
               <TextField
                 label="From Date"
                 type="date"
@@ -223,10 +223,11 @@ export default function BulkGSTConversion({ pageType }) {
                 onChange={(e) => setFromDate(e.target.value)}
                 fullWidth
                 InputLabelProps={{ shrink: true }}
+                size="small"
               />
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid item xs={12} sm={6} md={1.8}>
               <TextField
                 label="To Date"
                 type="date"
@@ -234,11 +235,12 @@ export default function BulkGSTConversion({ pageType }) {
                 onChange={(e) => setToDate(e.target.value)}
                 fullWidth
                 InputLabelProps={{ shrink: true }}
+                size="small"
               />
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
-              <FormControl fullWidth>
+            <Grid item xs={12} sm={6} md={1.6}>
+              <FormControl fullWidth size="small">
                 <InputLabel>Filter By</InputLabel>
                 <Select
                   value={dateField}
@@ -252,29 +254,31 @@ export default function BulkGSTConversion({ pageType }) {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4} sx={{ display: "flex", alignItems: "flex-end" }}>
-              <Button
-                variant="contained"
-                color="success"
-                onClick={handleConvertClick}
-                fullWidth
-                disabled={selectedAppointments.size === 0 || submitting}
-              >
-                Convert Selected
-              </Button>
-            </Grid>
 
-            <Grid item xs={12} sm={6} md={1.8} sx={{ display: "flex", alignItems: "center" }}>
-              <FormControl fullWidth>
+
+            <Grid item xs={12} sm={6} md={1.6} sx={{ display: "flex", alignItems: "center" }}>
+              <FormControl fullWidth size="small">
                 <Select
                   value={showConverted ? "all" : "pending"}
                   onChange={(e) => setShowConverted(e.target.value === "all")}
-                  size="small"
                 >
                   <MenuItem value="pending">Pending Only</MenuItem>
                   <MenuItem value="all">Show All</MenuItem>
                 </Select>
               </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={1.6} sx={{ display: "flex", alignItems: "center" }}>
+              <Button
+                variant="contained"
+                color="success"
+                onClick={handleConvertClick}
+                fullWidth
+                size="small"
+                disabled={selectedAppointments.size === 0 || submitting}
+              >
+                Bulk Convert
+              </Button>
             </Grid>
           </Grid>
 
@@ -323,9 +327,9 @@ export default function BulkGSTConversion({ pageType }) {
                   <TableCell>{apt.appointment_id}</TableCell>
                   <TableCell>{apt.customer_name}</TableCell>
                   <TableCell>{apt.plate_number || "N/A"}</TableCell>
-                  <TableCell align="right">₹{apt.invoice_amount?.toFixed(2) || "0.00"}</TableCell>
-                  <TableCell align="right">₹{apt.total_spare_amount?.toFixed(2) || "0.00"}</TableCell>
-                  <TableCell align="right">₹{apt.total_labour_amount?.toFixed(2) || "0.00"}</TableCell>
+                  <TableCell align="right">₹{(parseFloat(apt.invoice_amount) || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">₹{(parseFloat(apt.total_spare_amount) || 0).toFixed(2)}</TableCell>
+                  <TableCell align="right">₹{(parseFloat(apt.total_labour_amount) || 0).toFixed(2)}</TableCell>
                   <TableCell>{getGSTStatus(apt)}</TableCell>
                   <TableCell>{dayjs(apt.appointment_date).format("DD/MM/YYYY")}</TableCell>
                 </TableRow>

@@ -1,3 +1,9 @@
+
+
+import Cookies from "js-cookie";
+
+
+
 async function fetchEntries(
   token,
   setEntries,
@@ -7,8 +13,10 @@ async function fetchEntries(
   setSnackBarSeverity,
   startDate, // new parameter
   endDate  ,  // new parameter
-    status,     // new parameter
-    include_gst // new parameter
+ status,     // new parameter
+gstFilter ,
+limit,
+offset   // new parameter
 ) {
   try {
     if (!token) {
@@ -26,9 +34,9 @@ async function fetchEntries(
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
     if (status) params.append("status", "invoiced");
-    if (include_gst) params.append("include_gst", "true");
-  
-
+    if (gstFilter) params.append("gstFilter", gstFilter);
+      params.append("limit", limit);   
+       params.append("offset", offset);
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/appointment/gst_allappointments?${params.toString()}`,
       {
@@ -52,7 +60,6 @@ async function fetchEntries(
 }
 
 
-import Cookies from "js-cookie";
 
 // Helper function to get company_code from cookies
 function getCompanyCode() {
