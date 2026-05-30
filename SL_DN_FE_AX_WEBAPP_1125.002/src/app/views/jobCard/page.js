@@ -47,7 +47,7 @@ export default function JobCard() {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState();
   const [searchText, setSearchText] = useState("");
-
+  const [showFab, setShowFab] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deletionID, setDeletionID] = useState();
   const [appointmentEditModalOpen, setAppointmentEditModalOpen] = useState(false);
@@ -252,7 +252,7 @@ const handleSearchSubmit = () => {
   };
 const handleScroll = async (e) => {
   const { scrollTop, scrollHeight, clientHeight } = e.target;
-
+  setShowFab(scrollTop > 100);
   // if (
   //   scrollHeight - scrollTop <= clientHeight + 50 &&
   //   !loading &&
@@ -325,6 +325,14 @@ const handleScroll = async (e) => {
           dateFilters={dateFilters}
         scrollableTableId="scrollable-table"
         onScroll={handleScroll}
+         showScrollFab={showFab}
+        onScrollToTop={() => {
+          const tableEl = document.getElementById("scrollable-table");
+          if (tableEl) {
+            tableEl.scrollTo({ top: 0, behavior: "smooth" });
+          }
+          setShowFab(false);
+        }}
       />
 
       <Dialog

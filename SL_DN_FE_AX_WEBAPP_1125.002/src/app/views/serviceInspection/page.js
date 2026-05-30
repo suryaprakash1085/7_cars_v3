@@ -16,6 +16,7 @@ import { scrollToTopButtonDisplay, handleScrollToTop } from "../../../../control
 
 export default function ServiceInspection() {
   const router = useRouter();
+  const [limit,setLimit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedOption, setSelectedOption] = useState("vehicleModel");
@@ -24,7 +25,7 @@ export default function ServiceInspection() {
   const [filteredEntries, setFilteredEntries] = useState([]);
   const [pageType, setPageType] = useState(null);
   const [showFab, setShowFab] = useState(false);
-  const [limit,setLimit] = useState(null);
+  
 const [offset, setOffset] = useState(0);
 const [hasMore, setHasMore] = useState(true);
 const [isLoadingMore, setIsLoadingMore] = useState(false);
