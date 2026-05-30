@@ -13,7 +13,7 @@ import { fetchCompanyDetails } from "../../../../controllers/LeadsControllers.js
 
 import { scrollToTopButtonDisplay, handleScrollToTop } from "../../../../controllers/ServiceInspectionControllers.js";
 // const LIMIT = 17;
-const [limit,setLimit] = useState(null);
+
 export default function ServiceInspection() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,7 @@ export default function ServiceInspection() {
   const [filteredEntries, setFilteredEntries] = useState([]);
   const [pageType, setPageType] = useState(null);
   const [showFab, setShowFab] = useState(false);
-  
+  const [limit,setLimit] = useState(null);
 const [offset, setOffset] = useState(0);
 const [hasMore, setHasMore] = useState(true);
 const [isLoadingMore, setIsLoadingMore] = useState(false);
