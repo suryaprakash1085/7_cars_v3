@@ -1,8 +1,4 @@
-
-
 import Cookies from "js-cookie";
-
-
 
 async function fetchEntries(
   token,
@@ -11,14 +7,17 @@ async function fetchEntries(
   setOpenSnackbar,
   setSnackbarMessage,
   setSnackBarSeverity,
-  startDate, // new parameter
-  endDate  ,  // new parameter
- status,     // new parameter
-gstFilter ,
-limit,
-offset   // new parameter
+  startDate,
+  endDate,
+  status,
+  gstFilter,
+  limit = 10,
+  offset = 0,
+  append = false
 ) {
   try {
+    setLoading(true);
+
     if (!token) {
       setOpenSnackbar(true);
       setSnackbarMessage(
@@ -26,17 +25,17 @@ offset   // new parameter
       );
       setSnackBarSeverity("error");
       setLoading(false);
-      return;
+      return [];
     }
 
-    // Construct query parameters
     const params = new URLSearchParams();
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
     if (status) params.append("status", "invoiced");
     if (gstFilter) params.append("gstFilter", gstFilter);
-      params.append("limit", limit);   
-       params.append("offset", offset);
+    params.append("limit", limit);
+    params.append("offset", offset);
+
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/appointment/gst_allappointments?${params.toString()}`,
       {
@@ -49,30 +48,48 @@ offset   // new parameter
     if (!response.ok) throw new Error("Failed to fetch entries");
 
     const data = await response.json();
-    setEntries(data);
-    setLoading(false);
+
+    console.log("API raw response keys:", Object.keys(data));
+    console.log("data.data:", data.data);
+    console.log("Array.isArray(data):", Array.isArray(data));
+    console.log("Array.isArray(data.data):", Array.isArray(data.data));
+
+    const newData = Array.isArray(data.data)
+      ? data.data
+      : Array.isArray(data)
+      ? data
+      : [];
+    const total = data.total ?? newData.length;
+
+    console.log("newData length:", newData.length, "limit:", limit, "offset:", offset);
+
+    if (append) {
+      setEntries((prev) => [...prev, ...newData]);
+    } else {
+      setEntries(newData);
+    }
+
+    return { data: newData, total };
   } catch (err) {
+    console.error(err);
     setOpenSnackbar(true);
-    setSnackbarMessage(err.message);
+    setSnackbarMessage(err.message || "Something went wrong");
     setSnackBarSeverity("error");
+    return [];
+  } finally {
     setLoading(false);
   }
 }
 
-
-
-// Helper function to get company_code from cookies
 function getCompanyCode() {
   return Cookies.get("current_company_code") || Cookies.get("companyCode") || "";
 }
 
-// Function to handle search logic with API call
 const handleSearch = async (searchText, originalEntries, setEntries, token) => {
   try {
     const companyCode = getCompanyCode();
 
     if (!searchText || searchText.trim() === "") {
-      // When search is empty, fetch all appointments
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/appointment?`,
         {
@@ -82,17 +99,17 @@ const handleSearch = async (searchText, originalEntries, setEntries, token) => {
           },
         }
       );
-
       if (!response.ok) throw new Error("Failed to fetch entries");
-
       const data = await response.json();
-      // Filter to show only invoiced appointments
-      const invoicedData = data.filter((entry) => entry.status === "invoiced");
-      setEntries(invoicedData);
+      const arr = Array.isArray(data.data)
+        ? data.data
+        : Array.isArray(data)
+        ? data
+        : [];
+      setEntries(arr.filter((e) => e.status === "invoiced"));
       return;
     }
 
-    // When search has text, call search API
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/appointment/search/appointments?q=${encodeURIComponent(searchText)}&company_code=${encodeURIComponent(companyCode)}`,
       {
@@ -102,32 +119,31 @@ const handleSearch = async (searchText, originalEntries, setEntries, token) => {
         },
       }
     );
-
     if (!response.ok) throw new Error("Search failed");
-
     const results = await response.json();
-    // Filter search results to show only invoiced appointments
-    const invoicedResults = results.filter((entry) => entry.status === "invoiced");
-    setEntries(invoicedResults);
+    const arr = Array.isArray(results.data)
+      ? results.data
+      : Array.isArray(results)
+      ? results
+      : [];
+    setEntries(arr.filter((e) => e.status === "invoiced"));
   } catch (error) {
     console.error("Search error:", error);
-    // Fallback to client-side search if API fails
     if (!searchText || searchText.trim() === "") {
       setEntries(originalEntries);
       return;
     }
-
-    const lowerSearchText = searchText.toLowerCase();
-    const results = originalEntries.filter((tile) => {
-      return (
-        ((tile.plateNumber && tile.plateNumber.toLowerCase().includes(lowerSearchText)) ||
-        (tile.vehicle_id && tile.vehicle_id.toLowerCase().includes(lowerSearchText)) ||
-        (tile.customer_name && tile.customer_name.toLowerCase().includes(lowerSearchText)) ||
-        (tile.phone && tile.phone.toLowerCase().includes(lowerSearchText))) &&
-        tile.status === "invoiced"
-      );
-    });
-    setEntries(results);
+    const lower = searchText.toLowerCase();
+    setEntries(
+      originalEntries.filter(
+        (tile) =>
+          tile.status === "invoiced" &&
+          (tile.plateNumber?.toLowerCase().includes(lower) ||
+            tile.vehicle_id?.toLowerCase().includes(lower) ||
+            tile.customer_name?.toLowerCase().includes(lower) ||
+            tile.phone?.toLowerCase().includes(lower))
+      )
+    );
   }
 };
 

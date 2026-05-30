@@ -336,7 +336,8 @@ const [companyDetails, setCompanyDetails] = useState([]);
 
         setCustomer(customerData);
         setVehicleId(vehicleId);
-        setInventory(inventoryData);
+        // setInventory(inventoryData);
+        setInventory(Array.isArray(inventoryData) ? inventoryData : inventoryData.items || inventoryData.data || []);
         setAppointmentDataLog(appointmentData);
         appointmentLoadedRef.current = true;
 
@@ -905,13 +906,15 @@ useEffect(() => {
     });
   };
 
-  const getFilteredInventory = (type) => {
-    return inventory.filter(
-      (item) => item.category?.toLowerCase() === type?.toLowerCase()
-    );
-  };
+ const getFilteredInventory = (type) => {
+  if (!Array.isArray(inventory)) return [];
+  return inventory.filter(
+    (item) => item.category?.toLowerCase() === type?.toLowerCase()
+  );
+};
 
   const getSearchFilteredInventory = (searchValue) => {
+    if (!Array.isArray(inventory)) return [];
     if (!searchValue || searchValue.trim() === "") {
       // Return unique part names to avoid duplicate key errors
       const uniqueNames = new Set(inventory.map((option) => option.part_name));
@@ -1585,7 +1588,8 @@ useEffect(() => {
       );
       if (!response.ok) throw new Error("Failed to fetch inventory");
       const data = await response.json();
-      setInventory(data);
+      // setInventory(data);
+      setInventory(Array.isArray(data) ? data : data.items || data.data || []);
     } catch (error) {
       console.log("Error fetching inventory:", error);
     }

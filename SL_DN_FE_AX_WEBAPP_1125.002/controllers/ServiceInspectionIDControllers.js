@@ -25,6 +25,7 @@ const getFilteredInventory = (type, inventory) => {
 };
 
 const getActualStock = (itemId, inventory) => {
+  if (!Array.isArray(inventory)) return 0;
   const item = inventory.find((invItem) => invItem.inventory_id === itemId);
   return item ? item.quantity : 0;
 };
@@ -112,12 +113,13 @@ const fetchDetails = async (
     setAppointmentDataLog(apmtDta);
     const servicesData = await servicesResponse.json();
     console.log(servicesData);
-    const inventoryData = await inventoryResponse.json();
+  const inventoryData = await inventoryResponse.json();
+console.log("inventoryData shape:", inventoryData);
     const appointmentData = await appointmentResponse.json();
 
     setServices(servicesData.services_actual || []);
     console.log("sa", servicesData.services_actual);
-    setInventory(inventoryData);
+    setInventory(inventoryData.items || []);
 
     const customerId = appointmentData.customer_id;
     const vehicleId = appointmentData.vehicle_id;

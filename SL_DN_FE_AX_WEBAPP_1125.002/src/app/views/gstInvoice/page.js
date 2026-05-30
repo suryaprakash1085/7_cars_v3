@@ -1,10 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import dayjs from "dayjs";
 import axios from "axios";
-// import { Tabs, Tab, Box, Select, MenuItem, FormControl, InputLabel, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import {
   Box,
   Select,
@@ -28,26 +27,43 @@ import Navbar from "@/components/navbar.js";
 import BulkGSTConversion from "@/components/BulkGSTConversion.js";
 import generatePDFInvoice from "@/components/PDFGenerator_invoice.js";
 import { fetchEntries, handleSearch } from "../../../../controllers/gstinvoiceControllers.js";
+import { companydetails } from "../../../../controllers/invoiceListControllers";
 
 export default function GSTInvoice() {
   const router = useRouter();
+
   const [token, setToken] = useState();
   const [entries, setEntries] = useState([]);
   const [invoiceEntries, setInvoiceEntries] = useState([]);
   const [originalEntries, setOriginalEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState();
   const [snackBarSeverity, setSnackBarSeverity] = useState();
+
   const [searchText, setSearchText] = useState("");
   const [pageType, setPageType] = useState(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
-  // const [activeTab, setActiveTab] = useState(0);
+  const [showFab, setShowFab] = useState(false);
+
   const [gstFilter, setGstFilter] = useState("converted");
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [bulkDownloadModal, setBulkDownloadModal] = useState(false);
   const [bulkDownloadResults, setBulkDownloadResults] = useState(null);
   const [bulkConvertModal, setBulkConvertModal] = useState(false);
+
+  const [limit, setLimit] = useState(null);
+
+  const totalRef = useRef(0);
+  const offsetRef = useRef(0);
+  const hasMoreRef = useRef(true);
+  const loadingRef = useRef(false);
+  const searchTextRef = useRef("");
+  const startDateRef = useRef("");
+  const endDateRef = useRef("");
+  const tokenRef = useRef("");
+  const gstFilterRef = useRef("converted");
 
   const formatDate = (date) => {
     const year = date.getFullYear();
@@ -58,59 +74,92 @@ export default function GSTInvoice() {
 
   const [startDate, setStartDate] = useState(() => {
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    return formatDate(firstDay);
+    return formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
   });
 
-  const [endDate, setEndDate] = useState(() => {
-    const today = new Date();
-    return formatDate(today);
-  });
+  const [endDate, setEndDate] = useState(() => formatDate(new Date()));
 
+  useEffect(() => { searchTextRef.current = searchText; }, [searchText]);
+  useEffect(() => { startDateRef.current = startDate; }, [startDate]);
+  useEffect(() => { endDateRef.current = endDate; }, [endDate]);
+  useEffect(() => { gstFilterRef.current = gstFilter; }, [gstFilter]);
+
+  // Fetch fetch_limit from company details
   useEffect(() => {
-    // const savedTab = localStorage.getItem("gstInvoiceActiveTab");
-    // if (savedTab !== null) {
-    //   setActiveTab(parseInt(savedTab, 10));
-    // }
+    const fetchCompanyDetails = async () => {
+      try {
+        const details = await companydetails();
+        if (details?.company_details?.length > 0) {
+          const fetchLimit = Number(details.company_details[0].fetch_limit) || 20;
+          setLimit(fetchLimit);
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    fetchCompanyDetails();
+  }, []);
+
+  // Initial load (re-runs on date/filter/limit change)
+  useEffect(() => {
+    if (limit === null) return;
 
     const storedToken = Cookies.get("token");
     setToken(storedToken);
+    tokenRef.current = storedToken;
+    startDateRef.current = startDate;
+    endDateRef.current = endDate;
+    gstFilterRef.current = gstFilter;
     setPageType(Cookies.get("page_type"));
 
-   fetchEntries(
-  storedToken,
-  (data) => {
-    setEntries(data);
-    setOriginalEntries(data);
-  },
-  setLoading,
-  setOpenSnackbar,
-  setSnackbarMessage,
-  setSnackBarSeverity,
-  startDate,
-  endDate,
-  "invoiced",
-  gstFilter  //  sends "converted" or "all" directly
-);
-}, [startDate, endDate, gstFilter]); // ✅ add gstFilter
+    offsetRef.current = 0;
+    hasMoreRef.current = true;
+    loadingRef.current = false;
+    setEntries([]);
+    setIsSearchMode(false);
 
+    fetchEntries(
+      storedToken,
+      setEntries,
+      setLoading,
+      setOpenSnackbar,
+      setSnackbarMessage,
+      setSnackBarSeverity,
+      startDate,
+      endDate,
+      "invoiced",
+      gstFilter,
+      limit,
+      0,
+      false
+    ).then((result) => {
+      console.log("first load result:", result?.data?.length);
+      if (!result || result.data?.length === 0) {
+        hasMoreRef.current = false;
+      } else {
+        totalRef.current = result.total;
+        offsetRef.current = limit;
+        hasMoreRef.current = result.total > limit;
+      }
+      loadingRef.current = false;
+    });
+  }, [startDate, endDate, gstFilter, limit]);
+
+  useEffect(() => {
+    setOriginalEntries(entries);
+  }, [entries]);
+
+  // Fetch invoiceEntries for bulk operations
   useEffect(() => {
     const fetchInvoiceEntries = async () => {
       try {
         const storedToken = Cookies.get("token");
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/appointment/get/get_all_appointments_to_invoice`,
-          {
-            headers: {
-              Authorization: `Bearer ${storedToken}`,
-            },
-          }
+          { headers: { Authorization: `Bearer ${storedToken}` } }
         );
-        console.log("Fetched invoice entries:", response.data);
         if (response.data) {
           setInvoiceEntries(response.data);
-          // setEntries(response.data);
-          // setOriginalEntries(response.data);
         }
       } catch (error) {
         console.error("Error fetching invoice entries:", error);
@@ -121,6 +170,57 @@ export default function GSTInvoice() {
       fetchInvoiceEntries();
     }
   }, [entries, isSearchMode]);
+
+  const noOp = () => {};
+
+  const handleScroll = (event) => {
+    const { scrollTop, scrollHeight, clientHeight } = event.target;
+    setShowFab(scrollTop > 10);
+
+    if (searchTextRef.current) return;
+    if (!hasMoreRef.current) return;
+    if (loadingRef.current) return;
+
+    if (scrollHeight - scrollTop <= clientHeight + 200) {
+      console.log("Scroll load — offset:", offsetRef.current);
+      loadingRef.current = true;
+
+      fetchEntries(
+        tokenRef.current,
+        setEntries,
+        noOp,
+        setOpenSnackbar,
+        setSnackbarMessage,
+        setSnackBarSeverity,
+        startDateRef.current,
+        endDateRef.current,
+        "invoiced",
+        gstFilterRef.current,
+        limit,
+        offsetRef.current,
+        true
+      ).then((result) => {
+        console.log("scroll load data.length:", result?.data?.length);
+        console.log("newOffset:", offsetRef.current + (result?.data?.length ?? 0));
+        console.log("total:", totalRef.current);
+
+        if (!result || result.data?.length === 0) {
+          hasMoreRef.current = false;
+        } else {
+          totalRef.current = result.total;
+          const newOffset = offsetRef.current + result.data.length;
+          offsetRef.current = newOffset;
+          hasMoreRef.current = newOffset < totalRef.current;
+        }
+        loadingRef.current = false;
+      });
+    }
+  };
+
+  const handleScrollToTop = () => {
+    const container = document.getElementById("scrollable-table");
+    if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const columns = [
     {
@@ -135,12 +235,6 @@ export default function GSTInvoice() {
       minWidth: "80px",
       format: (value, row) => value || row.appointment_id || "N/A",
     },
-    // {
-    //   key: "invoice_id",
-    //   label: "Invoice ID",
-    //   minWidth: "80px",
-    //   format: (value, row) => value || row.invoice_id || "N/A",
-    // },
     {
       key: "gst_invoice_id",
       label: "Invoice ID",
@@ -182,10 +276,7 @@ export default function GSTInvoice() {
     ? entries
     : entries.filter((entry) => {
         const baseFilter =
-          // entry.plateNumber !== "CounterSales" &&
-          entry.status !== "deleted" &&
-          entry.status === "invoiced";
-
+          entry.status !== "deleted" && entry.status === "invoiced";
         if (gstFilter === "all") return baseFilter;
         if (gstFilter === "converted") return baseFilter && entry.gst_invoice_id;
         return baseFilter;
@@ -204,7 +295,6 @@ export default function GSTInvoice() {
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchText(value);
-
     if (!value || value.trim() === "") {
       setIsSearchMode(false);
       handleSearch("", originalEntries, setEntries, token);
@@ -229,16 +319,11 @@ export default function GSTInvoice() {
     const taxMissingAppointments = [];
 
     try {
-      // Fetch company details once for all invoices
       let companyDetailsData = [];
       try {
         const ssResponse = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/ss`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         companyDetailsData = ssResponse.data?.company_details || [];
       } catch (error) {
@@ -249,18 +334,12 @@ export default function GSTInvoice() {
         try {
           const response = await axios.get(
             `${process.env.NEXT_PUBLIC_API_URL}/appointment/${entry.appointment_id}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
+            { headers: { Authorization: `Bearer ${token}` } }
           );
 
           const appointmentData = response.data;
-          console.log("Appointment Data:", appointmentData);
 
-          // Transform services_actual to match PDF generator expectations
-           const transformedItems = (appointmentData.services_actual || []).map(
+          const transformedItems = (appointmentData.services_actual || []).map(
             (service) => ({
               service_id: service.service_id || "",
               spareList: service.items_required?.[0]?.item_name || "",
@@ -272,15 +351,15 @@ export default function GSTInvoice() {
                 Number(service.price || 0) *
                 Number(service.items_required?.[0]?.qty || service.qty || 0),
               tax: Number(service.items_required?.[0]?.tax || service.tax || 0),
-            }),
+            })
           );
 
-          // Check for items with missing or 0% tax
           const invalidItems = transformedItems.filter((item) => {
             if (item?.exclude) return false;
-            const tax = item?.tax !== undefined && item?.tax !== null && item?.tax !== ""
-              ? Number(item.tax)
-              : Number(item?.gst ?? NaN);
+            const tax =
+              item?.tax !== undefined && item?.tax !== null && item?.tax !== ""
+                ? Number(item.tax)
+                : Number(item?.gst ?? NaN);
             return isNaN(tax) || tax === 0;
           });
 
@@ -291,19 +370,15 @@ export default function GSTInvoice() {
             continue;
           }
 
-          // Calculate totalTax from transformed items
           const calculatedTotalTax = transformedItems.reduce((acc, item) => {
             const itemTotal = item.qty * item.price;
-            const itemTax = (itemTotal * item.tax) / 100;
-            return acc + itemTax;
+            return acc + (itemTotal * item.tax) / 100;
           }, 0);
 
-          // Use the exact same calculation as [id] page
           const formattedDate = appointmentData.invoice_date
             ? appointmentData.invoice_date.split("-").reverse().join("/")
             : new Date().toLocaleDateString("en-GB");
 
-          // Structure customer data - use appointment-level fields as fallback
           let customerData = {
             prefix: appointmentData.prefix || "",
             customer_name: appointmentData.customer_name || "",
@@ -324,16 +399,11 @@ export default function GSTInvoice() {
             },
           };
 
-          // Try to fetch full customer data for complete contact info
           if (appointmentData.customer_id) {
             try {
               const customerResponse = await axios.get(
                 `${process.env.NEXT_PUBLIC_API_URL}/customer/${appointmentData.customer_id}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
+                { headers: { Authorization: `Bearer ${token}` } }
               );
               const fullCustomer = customerResponse.data;
               customerData = {
@@ -360,9 +430,6 @@ export default function GSTInvoice() {
             }
           }
 
-          console.log("Customer Data for PDF:", customerData);
-
-          // Pass the data exactly as the [id] page does
           const pdfBlob = await generatePDFInvoice({
             customer: customerData,
             estimateItems: transformedItems,
@@ -384,8 +451,6 @@ export default function GSTInvoice() {
               appointmentData.company_logo ||
               companyDetailsData?.[0]?.logo ||
               "",
-         PdfHeaderImage: appointmentData.pdf_header_image || companyDetailsData?.[0]?.pdf_header || "",
-
             invoiceId: entry.invoice_id || "",
             companyDetails:
               companyDetailsData && companyDetailsData.length > 0
@@ -416,7 +481,6 @@ export default function GSTInvoice() {
           }
         } catch (error) {
           console.error(`Error downloading PDF for ${entry.appointment_id}:`, error);
-          console.error("Error details:", error.message, error.stack);
         }
       }
 
@@ -428,8 +492,7 @@ export default function GSTInvoice() {
       setSnackbarMessage(message);
       setSnackBarSeverity(successCount > 0 ? "success" : "warning");
 
-      // Set modal data
-     setBulkDownloadResults({
+      setBulkDownloadResults({
         totalEntries: filteredEntries.length,
         successCount,
         taxMissingCount,
@@ -458,31 +521,7 @@ export default function GSTInvoice() {
   return (
     <Box>
       {pageType !== "tab" && <Navbar pageName="GST Invoice" />}
-      {/* <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
-        <Tabs
-          value={activeTab}
-          onChange={(e, newValue) => {
-            setActiveTab(newValue);
-            localStorage.setItem("gstInvoiceActiveTab", newValue.toString());
-          }}
-          sx={{
-            px: 3,
-            "& .MuiTab-root": {
-              color: "#999",
-              textTransform: "uppercase",
-              fontWeight: 700,
-            },
-            "& .Mui-selected": {
-              color: "#1976d2 !important",
-            },
-          }}
-        >
-          <Tab label="Individual Conversion" />
-          <Tab label="Bulk Conversion" />
-        </Tabs>
-      </Box> */}
 
-    
       <DynamicListTable
         title="GST Invoice"
         columns={columns}
@@ -494,6 +533,20 @@ export default function GSTInvoice() {
         onSearchChange={handleSearchChange}
         onSearchSubmit={handleSearchSubmit}
         onRowClick={handleRowClick}
+        onScroll={handleScroll}
+        scrollableTableId="scrollable-table"
+        scrollToTopDisplay={(e) => setShowFab(e.target.scrollTop > 10)}
+        onScrollToTop={() => {
+          handleScrollToTop();
+          setShowFab(false);
+        }}
+        showScrollFab={showFab}
+        snackbar={{
+          open: openSnackbar,
+          message: snackbarMessage,
+          severity: snackBarSeverity,
+          onClose: () => setOpenSnackbar(false),
+        }}
         dateFilters={[
           {
             label: "Start Date",
@@ -508,64 +561,59 @@ export default function GSTInvoice() {
         ]}
         extraControls={[
           <div style={{ display: "flex", gap: 16, justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: 16}}>
-          <Button
-            key="bulk-convert"
-            variant="contained"
-            color="primary"
-            onClick={() => setBulkConvertModal(true)}
-            size="small"
-          >
-            Bulk Convert
-          </Button>
-          </div>
-          <div style={{ display: "flex", gap: 16 }}>
-          <Select
-            key="gst-filter"
-            value={gstFilter}
-            onChange={(e) => setGstFilter(e.target.value)}
-            size="small"
-            sx={{
-              backgroundColor: "white",
-              borderRadius: 1,
-              minWidth: 140,
-            }}
-          >
-            <MenuItem value="converted">GST Converted</MenuItem>
-            <MenuItem value="all">All</MenuItem>
-          </Select>
-          <Tooltip
-            title={
-              filteredEntries.length > 0
-                ? `Appointments: ${filteredEntries.map((e) => e.appointment_id).join(", ")}`
-                : "No invoices available"
-            }
-          >
-            <span>
+            <div style={{ display: "flex", gap: 16 }}>
               <Button
-                key="bulk-download"
+                key="bulk-convert"
                 variant="contained"
                 color="primary"
-                onClick={handleBulkDownload}
-                disabled={bulkDownloading || filteredEntries.length === 0}
+                onClick={() => setBulkConvertModal(true)}
                 size="small"
               >
-                {bulkDownloading
-                  ? "Downloading..."
-                  : `Bulk Download (${filteredEntries.length})`}
+                Bulk Convert
               </Button>
-            </span>
-          </Tooltip>
-          </div>
-          </div>
+            </div>
+            <div style={{ display: "flex", gap: 16 }}>
+              <Select
+                key="gst-filter"
+                value={gstFilter}
+                onChange={(e) => setGstFilter(e.target.value)}
+                size="small"
+                sx={{
+                  backgroundColor: "white",
+                  borderRadius: 1,
+                  minWidth: 140,
+                }}
+              >
+                <MenuItem value="converted">GST Converted</MenuItem>
+                <MenuItem value="all">All</MenuItem>
+              </Select>
+              <Tooltip
+                title={
+                  filteredEntries.length > 0
+                    ? `Appointments: ${filteredEntries.map((e) => e.appointment_id).join(", ")}`
+                    : "No invoices available"
+                }
+              >
+                <span>
+                  <Button
+                    key="bulk-download"
+                    variant="contained"
+                    color="primary"
+                    onClick={handleBulkDownload}
+                    disabled={bulkDownloading || filteredEntries.length === 0}
+                    size="small"
+                  >
+                    {bulkDownloading
+                      ? "Downloading..."
+                      : `Bulk Download (${filteredEntries.length})`}
+                  </Button>
+                </span>
+              </Tooltip>
+            </div>
+          </div>,
         ]}
-        snackbar={{
-          open: openSnackbar,
-          message: snackbarMessage,
-          severity: snackBarSeverity,
-          onClose: () => setOpenSnackbar(false),
-        }}
       />
+
       {/* Bulk Convert Modal */}
       <Dialog
         open={bulkConvertModal}
@@ -583,6 +631,7 @@ export default function GSTInvoice() {
           </Button>
         </DialogActions>
       </Dialog>
+
       {/* Bulk Download Results Modal */}
       <Dialog
         open={bulkDownloadModal}
@@ -637,7 +686,7 @@ export default function GSTInvoice() {
                       onClick={() =>
                         window.open(
                           `/views/gstInvoice/${entry.appointment_id}`,
-                          "_blank",
+                          "_blank"
                         )
                       }
                       sx={{

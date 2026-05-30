@@ -303,7 +303,13 @@ const CustomerDetail = () => {
       throw new Error("Failed to fetch inventory details");
 
     const customerData = await customerResponse.json();
-    const inventoryData = await inventoryResponse.json();
+const inventoryData = await inventoryResponse.json();
+const inventoryArray = Array.isArray(inventoryData)
+  ? inventoryData
+  : Array.isArray(inventoryData.data)
+  ? inventoryData.data
+  : [];
+setInventory(inventoryArray);
 
     setCustomer(customerData);
     setVehicleId(vehicleId);
@@ -1147,23 +1153,24 @@ const addEstimateItem = () => {
   };
 
   // Calculate itemsToProcure for rendering // include item_id
-  const itemsToProcure = estimateItems
-    .map((item) => {
-      const stockQuantity =
-        inventory.find((invItem) => invItem.part_name === item.spareList)
-          ?.quantity || 0;
-      const requiredQuantity =
-        item.qty > stockQuantity ? item.qty - stockQuantity : 0; // Calculate the difference
-      return {
-        ...item,
-        qty: requiredQuantity,
-        item_id: inventory.find(
-          (invItem) => invItem.part_name === item.spareList
-        )?.inventory_id,
-      }; // Include only the difference in quantity
-    })
-    .filter((item) => item.qty > 0); // Only include items with a positive quantity difference
-
+ const itemsToProcure = Array.isArray(inventory)
+  ? estimateItems
+      .map((item) => {
+        const stockQuantity =
+          inventory.find((invItem) => invItem.part_name === item.spareList)
+            ?.quantity || 0;
+        const requiredQuantity =
+          item.qty > stockQuantity ? item.qty - stockQuantity : 0;
+        return {
+          ...item,
+          qty: requiredQuantity,
+          item_id: inventory.find(
+            (invItem) => invItem.part_name === item.spareList
+          )?.inventory_id,
+        };
+      })
+      .filter((item) => item.qty > 0)
+  : [];
   const isCreatePrEnabled = itemsToProcure.length > 0 && !prCreated; // Enable if there are items to procure and PR not created
 
   //!! Getting common PR number from services_actual
@@ -1814,8 +1821,13 @@ const addEstimateItem = () => {
         }
       );
       if (!response.ok) throw new Error("Failed to fetch inventory");
-      const data = await response.json();
-      setInventory(data);
+     const data = await response.json();
+const inventoryArray = Array.isArray(data)
+  ? data
+  : Array.isArray(data.data)
+  ? data.data
+  : [];
+setInventory(inventoryArray);
     } catch (error) {
       console.log("Error fetching inventory:", error);
     }
