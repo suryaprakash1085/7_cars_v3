@@ -21,6 +21,7 @@ export default function ServiceCenter() {
   const [filteredEntries, setFilteredEntries] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [showFab, setShowFab] = useState(false);
 const [limit, setLimit] = useState(20);
 // const [offset, setOffset] = useState(0);
 const offsetRef = React.useRef(0);
@@ -28,7 +29,7 @@ const [hasMore, setHasMore] = useState(true);
 const isFetching = React.useRef(false);
 const handleScroll = async (e) => {
   const { scrollTop, scrollHeight, clientHeight } = e.target;
-
+setShowFab(scrollTop > 100);
   if (isFetching.current) return;
 
 if (
@@ -174,7 +175,7 @@ useEffect(() => {
     router.push(`/views/serviceCenter/${row.appointment_id}`);
   };
 
-  return (
+ return (
     <DynamicListTable
       title="Service Center"
       columns={columns}
@@ -191,7 +192,15 @@ useEffect(() => {
       }}
       dateFilters={dateFilters}
       scrollableTableId="scrollable-table"
-       onScroll={handleScroll}
+      onScroll={handleScroll}
+      showScrollFab={showFab}
+      onScrollToTop={() => {
+        const tableEl = document.getElementById("scrollable-table");
+        if (tableEl) {
+          tableEl.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        setShowFab(false);
+      }}
     />
   );
 }

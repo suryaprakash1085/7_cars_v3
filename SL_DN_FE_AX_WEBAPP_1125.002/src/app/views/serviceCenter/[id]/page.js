@@ -681,17 +681,24 @@ const safeParseComments = (comments) => {
 
                     </Box>
 
-                    {/* <TabPanel value={tabValue} index={0}> */}
-                    <TableContainer
-                      id="scrollable-table"
-                      style={{
-                        maxHeight: "40vh",
-                        overflowY: "auto",
-                      }}
-                      onScroll={(event) => {
-                        scrollToTopButtonDisplay(event, setShowFab);
-                      }}
-                    >
+                 
+ 
+                   
+<TableContainer
+  id="scrollable-table"
+  style={{
+    maxHeight: "40vh",
+    overflowY: "auto",
+  }}
+  onScroll={(event) => {
+    const el = event.target;
+    if (el.scrollTop > 50) {
+      setShowFab(true);
+    } else {
+      setShowFab(false);
+    }
+  }}
+>
                       <Table stickyHeader>
                         <TableHead>
                           <TableRow>
@@ -950,23 +957,33 @@ const safeParseComments = (comments) => {
             {/* Chat Box */}
             <LiveChat room={appointmentId} />
 
-            {/* Back to Top FAB */}
-            {showFab && (
-              <Fab
-                size="small"
-                onClick={handleScrollToTop}
-                style={{
-                  backgroundColor: "white",
-                  color: "primary",
-                  position: "absolute",
-                  bottom: 20,
-                  right: 90,
-                  zIndex: 10,
-                }}
-              >
-                <ArrowUpwardIcon />
-              </Fab>
-            )}
+       
+{showFab && (
+  <Fab
+    size="small"
+    onClick={() => {
+      const tableEl = document.getElementById("scrollable-table");
+      if (tableEl) {
+        tableEl.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      setShowFab(false);
+    }}
+    style={{
+      backgroundColor: "white",
+      color: "black",
+      position: "fixed",
+      bottom: 30,
+      right: 30,
+      zIndex: 1000,
+      boxShadow: "0px 2px 10px rgba(0,0,0,0.4)",
+      width: 48,
+      height: 48,
+      borderRadius: "50%",
+    }}
+  >
+    <ArrowUpwardIcon style={{ color: "black" }} />
+  </Fab>
+)}
           </Box>
         </>
       )}

@@ -13,9 +13,10 @@ import { fetchCompanyDetails } from "../../../../controllers/LeadsControllers.js
 
 import { scrollToTopButtonDisplay, handleScrollToTop } from "../../../../controllers/ServiceInspectionControllers.js";
 // const LIMIT = 17;
-const [limit,setLimit] = useState(null);
+
 export default function ServiceInspection() {
   const router = useRouter();
+  const [limit,setLimit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedOption, setSelectedOption] = useState("vehicleModel");
