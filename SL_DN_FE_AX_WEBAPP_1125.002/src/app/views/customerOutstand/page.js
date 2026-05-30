@@ -17,6 +17,7 @@ import {
   fetchMoreData,
 } from "../../../../controllers/customerOutstandingControllers";
 
+
 // Component imports
 import Navbar from "../../../components/navbar";
 import BackButton from "@/components/backButton";
@@ -105,11 +106,16 @@ const tokenRef = useRef("");
   // Set initial date range: start date = today - 1 week, end date = today
   useEffect(() => {
     const today = new Date();
-    const startDate7DaysAgo = new Date(today);
-    startDate7DaysAgo.setDate(today.getDate() - 7);
-
-    setStartDate(startDate7DaysAgo.toISOString().split("T")[0]);
-    setEndDate(today.toISOString().split("T")[0]);
+    const firstDay =new Date(today.getFullYear(), today.getMonth(), 1);
+    
+   const formatDate =(date)=>{
+    const Year=date.getFullYear();
+    const Month=String(date.getMonth()+1).padStart(2,"0");
+    const Day=String(date.getDate()).padStart(2,"0");
+    return `${Year}-${Month}-${Day}`;
+   }
+    setStartDate(formatDate(firstDay));
+    setEndDate(formatDate(today));
   }, []);
 
   useEffect(() => {
