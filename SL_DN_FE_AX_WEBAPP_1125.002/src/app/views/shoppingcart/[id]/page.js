@@ -169,7 +169,7 @@ export default function CustomerDetail() {
       );
       if (!response.ok) throw new Error("Failed to fetch inventory data");
       const data = await response.json();
-      setInventory(Array.isArray(inventoryData.data) ? inventoryData.data : []); // ✅ FIXED // ✅ FIXED
+      setInventory(Array.isArray(inventoryData.data) ? inventoryData.data : []); //   FIXED //   FIXED
     } catch (error) {
       console.log("Error fetching inventory data:", error);
     }
@@ -374,7 +374,7 @@ export default function CustomerDetail() {
           appointment_id: appointmentId,
         });
 
-  setInventory(Array.isArray(inventoryData.data) ? inventoryData.data : []);  // ✅ FIXED
+  setInventory(Array.isArray(inventoryData.data) ? inventoryData.data : []);  //   FIXED
         setAppointmentDataLog(appointmentData);
 
         const matchedVehicle =
@@ -457,7 +457,7 @@ export default function CustomerDetail() {
 
   const { grandTotal, totalTax, overallTotal } = calculateTotals();
 
-  const safeInventory = Array.isArray(inventory) ? inventory : []; // ✅ FIXED - one safe reference used everywhere below
+  const safeInventory = Array.isArray(inventory) ? inventory : []; //   FIXED - one safe reference used everywhere below
 
   const generatePDF = async (mode = "download", passedInvoiceDate = null) => {
     if (!estimateItems.some((item) => item.price > 0)) {
@@ -699,7 +699,7 @@ export default function CustomerDetail() {
       return;
     }
 
-    const selectedItem = safeInventory.find((item) => item.part_name === value); // ✅ FIXED
+    const selectedItem = safeInventory.find((item) => item.part_name === value); //   FIXED
     if (selectedItem) {
       updateEstimateItem(index, "spareList", value);
       updateEstimateItem(index, "price", selectedItem.price);
@@ -719,7 +719,7 @@ export default function CustomerDetail() {
   };
 
   const getFilteredInventory = (type) => {
-    return safeInventory.filter( // ✅ FIXED
+    return safeInventory.filter( //   FIXED
       (item) => item.category?.toLowerCase() === type?.toLowerCase(),
     );
   };
@@ -727,7 +727,7 @@ export default function CustomerDetail() {
   const productOptions = useMemo(() => {
     const seen = new Set();
     const opts = [];
-    if (!Array.isArray(inventory)) return opts; // ✅ FIXED
+    if (!Array.isArray(inventory)) return opts; //   FIXED
     inventory.forEach((item) => {
       let name = item.part_name || "";
       name = name.replace(/\s+/g, " ").trim();
@@ -855,7 +855,7 @@ export default function CustomerDetail() {
         vehicle_id: appointmentDataLog.vehicle_id,
         items_required: [
           {
-            item_id: safeInventory.find( // ✅ FIXED
+            item_id: safeInventory.find( //   FIXED
               (invItem) => invItem.part_name === item.spareList,
             )?.inventory_id,
             item_name: item.spareList,
@@ -942,14 +942,14 @@ export default function CustomerDetail() {
   const itemsToProcure = estimateItems
     .map((item) => {
       const stockQuantity =
-        safeInventory.find((invItem) => invItem.part_name === item.spareList) // ✅ FIXED
+        safeInventory.find((invItem) => invItem.part_name === item.spareList) //   FIXED
           ?.quantity || 0;
       const requiredQuantity =
         item.qty > stockQuantity ? item.qty - stockQuantity : 0;
       return {
         ...item,
         qty: requiredQuantity,
-        item_id: safeInventory.find( // ✅ FIXED
+        item_id: safeInventory.find( //   FIXED
           (invItem) => invItem.part_name === item.spareList,
         )?.inventory_id,
       };
@@ -1186,12 +1186,12 @@ export default function CustomerDetail() {
       return;
     }
 
-    if (!safeInventory || safeInventory.length === 0) { // ✅ FIXED
+    if (!safeInventory || safeInventory.length === 0) { //   FIXED
       showSnackbarAlert("Inventory not loaded yet. Please wait.", "warning");
       return;
     }
 
-    const selectedItem = safeInventory.find( // ✅ FIXED
+    const selectedItem = safeInventory.find( //   FIXED
       (item) => item.part_name === productName,
     );
 
@@ -1435,7 +1435,7 @@ export default function CustomerDetail() {
                     onChange={(e, newValue) => {
                       setHeaderProductName(newValue || "");
                       if (newValue) {
-                        const selectedItem = safeInventory.find( // ✅ FIXED
+                        const selectedItem = safeInventory.find( //   FIXED
                           (item) => item.part_name?.trim() === newValue?.trim(),
                         );
                         if (selectedItem) {
@@ -1794,7 +1794,7 @@ export default function CustomerDetail() {
                         {estimateItems
                           .filter((item) => item.spareList)
                           .map((item, filteredIndex) => {
-                            const selectedItem = safeInventory.find( // ✅ FIXED
+                            const selectedItem = safeInventory.find( //   FIXED
                               (invItem) => invItem.part_name === item.spareList,
                             );
 

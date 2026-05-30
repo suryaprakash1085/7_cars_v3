@@ -33,7 +33,7 @@ const fetchData = async (
     setData(updatedData);
     setFilteredData(updatedData);
 
-    // ✅ return total for infinite scroll
+    //   return total for infinite scroll
     return { total: response.data.total, data: updatedData };
 
   } catch (error) {
@@ -60,7 +60,7 @@ const fetchMoreData = async (
     });
 
     const rawData = response.data.data;
-    const rawCount = rawData.length; // ✅ raw count before aggregation
+    const rawCount = rawData.length; //   raw count before aggregation
 
     const transformedData = rawData.map((item) => ({
       customer_id: item.customer_id,
@@ -89,7 +89,7 @@ const fetchMoreData = async (
       return [...prev, ...unique];
     });
 
-    return { total: response.data.total, rawCount }; // ✅ return rawCount
+    return { total: response.data.total, rawCount }; //   return rawCount
   } catch (error) {
     console.error("Error fetching more data:", error);
     return null;
@@ -101,7 +101,7 @@ const handleScroll = (event, setShowFab, callback) => {
 
   const { scrollTop, scrollHeight, clientHeight } = event.target;
   if (scrollHeight - scrollTop <= clientHeight + 200) {
-    callback(); // ✅ trigger load more
+    callback(); //   trigger load more
   }
 };
 

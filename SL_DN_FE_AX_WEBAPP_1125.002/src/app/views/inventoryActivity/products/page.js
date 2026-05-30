@@ -59,7 +59,7 @@ export default function Inventory() {
   const [serviceOptions, setServiceOptions] = useState([]);
   const [gstOptions, setGstOptions] = useState([]);
 
-  // ✅ refs
+  //   refs
   const loadingRef = useRef(false);
   const hasMoreRef = useRef(true);
   const totalRef = useRef(0);
@@ -67,7 +67,7 @@ export default function Inventory() {
   const offsetRef = useRef(0);
   const limitRef = useRef(20);
 
-  // ✅ fetch options
+  //   fetch options
   useEffect(() => {
     async function fetchUomData() {
       try {
@@ -105,7 +105,7 @@ export default function Inventory() {
     fetchGstData();
   }, []);
 
-  // ✅ set token
+  //   set token
   useEffect(() => {
     const storedToken = Cookies.get("token");
     if (!storedToken) return;
@@ -113,7 +113,7 @@ export default function Inventory() {
     tokenRef.current = storedToken;
   }, []);
 
-  // ✅ initial load
+  //   initial load
   useEffect(() => {
     if (!token) return;
 
@@ -151,7 +151,7 @@ export default function Inventory() {
     init();
   }, [token]);
 
-  // ✅ scroll handler
+  //   scroll handler
   const handleScroll = (event) => {
     scrollToTopButtonDisplay(event, setShowFab);
 
@@ -162,7 +162,7 @@ export default function Inventory() {
     if (loadingRef.current) return;
 
     if (scrollHeight - scrollTop <= clientHeight + 200) {
-      console.log("✅ API calling offset:", offsetRef.current);
+      console.log("  API calling offset:", offsetRef.current);
       loadingRef.current = true;
 
       fetchInventory(
@@ -180,7 +180,7 @@ export default function Inventory() {
           } else {
             hasMoreRef.current = true;
           }
-          // ✅ delay unlock so DOM settles before next scroll fires
+          //   delay unlock so DOM settles before next scroll fires
           setTimeout(() => {
             loadingRef.current = false;
           }, 300);

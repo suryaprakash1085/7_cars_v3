@@ -52,7 +52,7 @@ export default function JobAssessment() {
   });
   const [endDate, setEndDate] = useState(() => formatDate(new Date()));
 
-  // ✅ Refs
+  //   Refs
   const offsetRef = useRef(0);
   const hasMoreRef = useRef(true);
   const loadingRef = useRef(false);
@@ -68,7 +68,7 @@ export default function JobAssessment() {
 
   const noOp = () => {};
 
-  // ✅ Initial load
+  //   Initial load
   useEffect(() => {
     const storedToken = Cookies.get("token");
     setToken(storedToken);
@@ -98,7 +98,7 @@ export default function JobAssessment() {
     });
   }, [startDate, endDate]);
 
-  // ✅ Scroll handler
+  //   Scroll handler
   const handleScroll = (event) => {
     scrollToTopButtonDisplay(event, setShowFab);
 
@@ -109,7 +109,7 @@ export default function JobAssessment() {
     if (loadingRef.current) return;
 
     if (scrollHeight - scrollTop <= clientHeight + 200) {
-      console.log("✅ API calling offset:", offsetRef.current);
+      console.log("  API calling offset:", offsetRef.current);
       loadingRef.current = true;
 
       fetchEntries(

@@ -354,7 +354,8 @@ router.get("/transactions", async (req, res) => {
     searchText,
     limit ,
     offset,
-    status
+    status,
+   
   } = req.query;
 
   try {

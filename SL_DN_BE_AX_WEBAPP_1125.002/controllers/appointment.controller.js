@@ -2614,20 +2614,81 @@ export async function updateAppointmentInvoice(req, res) {
 export async function getAppointmentsByDateRange(req, res) {
   try {
     const { start_date, end_date } = req.params;
+    const { status, limit: limitRaw, offset: offsetRaw } = req.query;
 
-    console.log("START:", start_date);
-    console.log("END:", end_date);
+    const limit = parseInt(limitRaw) || 10;
+    const offset = parseInt(offsetRaw) || 0;
 
-    //   Get prefixes
     const prefixRows = await knex("number_range").whereIn("id_type", [
       "countersales",
       "Appointment",
     ]);
-
     const prefixes = prefixRows.map((p) => p.prefix);
 
-    //   MAIN QUERY
-    const appointments = await knex("appointments")
+    // --- STEP 1: Get paginated appointment_ids first ---
+    let idQuery = knex("appointments")
+      .select("appointments.appointment_id", "appointments.appointment_date", "appointments.status")
+      .where((builder) => {
+        builder.andWhere((prefixBuilder) => {
+          prefixes.forEach((p, i) => {
+            if (i === 0) {
+              prefixBuilder.where("appointments.appointment_id", "like", `${p}%`);
+            } else {
+              prefixBuilder.orWhere("appointments.appointment_id", "like", `${p}%`);
+            }
+          });
+        });
+
+        builder.andWhereRaw(
+          "DATE(appointments.appointment_date) >= ? AND DATE(appointments.appointment_date) <= ?",
+          [start_date, end_date]
+        );
+
+        if (status) {
+          const statuses = Array.isArray(status) ? status : [status];
+          builder.whereIn("appointments.status", statuses);
+        }
+      })
+      .orderBy("appointments.appointment_date", "desc")
+      .orderByRaw(`FIELD(appointments.status, 'invoiced', 'invoice') asc`)
+      .limit(limit)
+      .offset(offset);
+
+    // --- STEP 2: COUNT total unique appointments ---
+    let countQuery = knex("appointments")
+      .countDistinct("appointments.appointment_id as count")
+      .where((builder) => {
+        builder.andWhere((prefixBuilder) => {
+          prefixes.forEach((p, i) => {
+            if (i === 0) {
+              prefixBuilder.where("appointments.appointment_id", "like", `${p}%`);
+            } else {
+              prefixBuilder.orWhere("appointments.appointment_id", "like", `${p}%`);
+            }
+          });
+        });
+
+        builder.andWhereRaw(
+          "DATE(appointments.appointment_date) >= ? AND DATE(appointments.appointment_date) <= ?",
+          [start_date, end_date]
+        );
+
+        if (status) {
+          const statuses = Array.isArray(status) ? status : [status];
+          builder.whereIn("appointments.status", statuses);
+        }
+      });
+
+    const [pagedIds, [{ count: total }]] = await Promise.all([idQuery, countQuery]);
+
+    if (pagedIds.length === 0) {
+      return res.status(200).json({ total: parseInt(total), limit, offset, data: [] });
+    }
+
+    const appointmentIds = pagedIds.map((r) => r.appointment_id);
+
+    // --- STEP 3: Fetch full data only for those appointment_ids ---
+    const rows = await knex("appointments")
       .select(
         "appointments.appointment_id",
         "appointments.customer_id",
@@ -2676,49 +2737,24 @@ export async function getAppointmentsByDateRange(req, res) {
         "vehicles.vin",
         "vehicles.fuel_type",
       )
-      .leftJoin(
-        "customers",
-        "appointments.customer_id",
-        "customers.customer_id",
-      )
-      .leftJoin(
-        "services_actual",
-        "appointments.appointment_id",
-        "services_actual.appointment_id",
-      )
-      .leftJoin(
-        "items_required",
-        "services_actual.service_id",
-        "items_required.service_id",
-      )
+      .leftJoin("customers", "appointments.customer_id", "customers.customer_id")
+      .leftJoin("services_actual", "appointments.appointment_id", "services_actual.appointment_id")
+      .leftJoin("items_required", "services_actual.service_id", "items_required.service_id")
       .leftJoin("vehicles", "appointments.vehicle_id", "vehicles.vehicle_id")
+      .whereIn("appointments.appointment_id", appointmentIds)
+      .orderBy("appointments.appointment_date", "desc")
+      .orderByRaw(`FIELD(appointments.status, 'invoiced', 'invoice') asc`);
 
-      //   PREFIX FILTER (FIXED)
-      .where((builder) => {
-        prefixes.forEach((p, i) => {
-          if (i === 0) {
-            builder.where("appointments.appointment_id", "like", `${p}%`);
-          } else {
-            builder.orWhere("appointments.appointment_id", "like", `${p}%`);
-          }
-        });
-      })
-
-      //   DATE FILTER (WORKS FOR ALL FORMATS)
-      .andWhereRaw(
-        "DATE(appointments.appointment_date) >= ? AND DATE(appointments.appointment_date) <= ?",
-        [start_date, end_date],
-      )
-
-      .orderBy("appointments.appointment_id", "desc");
-
-    console.log("SQL:", appointments.toString());
-
-    //   FORMAT RESPONSE
+    // --- STEP 4: Format response (same as before) ---
     const formattedAppointments = [];
     const map = {};
 
-    appointments.forEach((row) => {
+    // Preserve the paged order
+    appointmentIds.forEach((id) => {
+      map[id] = null;
+    });
+
+    rows.forEach((row) => {
       if (!map[row.appointment_id]) {
         map[row.appointment_id] = {
           _id: `appointment-${row.appointment_id}`,
@@ -2758,15 +2794,11 @@ export async function getAppointmentsByDateRange(req, res) {
           vin: row.vin,
           fuel_type: row.fuel_type,
         };
-        formattedAppointments.push(map[row.appointment_id]);
       }
 
       const appointment = map[row.appointment_id];
 
-      let service = appointment.services_actual.find(
-        (s) => s.service_id === row.service_id,
-      );
-
+      let service = appointment.services_actual.find((s) => s.service_id === row.service_id);
       if (!service && row.service_id) {
         service = {
           _id: `service-${row.service_id}`,
@@ -2784,9 +2816,7 @@ export async function getAppointmentsByDateRange(req, res) {
       }
 
       if (row.item_id && service) {
-        const itemExists = service.items_required.some(
-          (item) => item.item_id === row.item_id,
-        );
+        const itemExists = service.items_required.some((item) => item.item_id === row.item_id);
         if (!itemExists) {
           service.items_required.push({
             _id: `item-${row.item_id}`,
@@ -2799,7 +2829,18 @@ export async function getAppointmentsByDateRange(req, res) {
       }
     });
 
-    return res.status(200).json(formattedAppointments);
+    // Maintain paged order in output
+    appointmentIds.forEach((id) => {
+      if (map[id]) formattedAppointments.push(map[id]);
+    });
+
+    return res.status(200).json({
+      total: parseInt(total),
+      limit,
+      offset,
+      data: formattedAppointments,
+    });
+
   } catch (error) {
     console.error("ERROR:", error);
     return res.status(500).json({

@@ -165,7 +165,7 @@ useEffect(() => {
 
   if (!startDate || !endDate) return;
 
-  // ✅ reset on date change
+  //   reset on date change
   offsetRef.current = 0;
   hasMoreRef.current = true;
   loadingRef.current = false;
@@ -246,7 +246,7 @@ const onTableScroll = (event) => {
     fetchMoreData(
       axios, tokenRef.current,
       offsetRef.current, limitRef.current,
-      startDateRef.current, endDateRef.current, // ✅ refs not state
+      startDateRef.current, endDateRef.current, //   refs not state
       updateStatus, setData, setFilteredData
     ).then((result) => {
       if (!result || result.rawCount === 0) {
