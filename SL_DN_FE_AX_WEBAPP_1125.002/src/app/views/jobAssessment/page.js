@@ -16,7 +16,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-
+import { fetchCompanyDetails } from "../../../../controllers/LeadsControllers.js";
 const formatDate = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -24,7 +24,7 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const limit = 20;
+// const limit = 20;
 
 export default function JobAssessment() {
   const router = useRouter();
@@ -52,7 +52,7 @@ export default function JobAssessment() {
   });
   const [endDate, setEndDate] = useState(() => formatDate(new Date()));
 
-  //   Refs
+  // ✅ Refs
   const offsetRef = useRef(0);
   const hasMoreRef = useRef(true);
   const loadingRef = useRef(false);
@@ -61,15 +61,26 @@ export default function JobAssessment() {
   const searchTextRef = useRef("");
   const startDateRef = useRef("");
   const endDateRef = useRef("");
-
+  const limitRef = useRef(20);        // ← add here
+const [fetchLimit, setFetchLimit] = useState(null); 
+useEffect(() => {
+  const storedToken = Cookies.get("token");
+  if (storedToken) {
+    fetchCompanyDetails(storedToken, (limit) => {
+      limitRef.current = parseInt(limit);
+      setFetchLimit(parseInt(limit));
+    });
+  }
+}, []);
   useEffect(() => { searchTextRef.current = searchText; }, [searchText]);
   useEffect(() => { startDateRef.current = startDate; }, [startDate]);
   useEffect(() => { endDateRef.current = endDate; }, [endDate]);
 
   const noOp = () => {};
 
-  //   Initial load
+  // ✅ Initial load
   useEffect(() => {
+     if (!fetchLimit) return; 
     const storedToken = Cookies.get("token");
     setToken(storedToken);
     tokenRef.current = storedToken;
@@ -85,7 +96,7 @@ export default function JobAssessment() {
     fetchEntries(
       storedToken, setEntries, setFilteredEntries, setLoading,
       setOpenSnackbar, setSnackbarMessage, setSnackbarSeverity,
-      startDate, endDate, limit, 0, false
+      startDate, endDate, limitRef.current, 0, false
     ).then((result) => {
       if (!result || result.data.length === 0) {
         hasMoreRef.current = false;
@@ -96,9 +107,9 @@ export default function JobAssessment() {
       }
       loadingRef.current = false;
     });
-  }, [startDate, endDate]);
+  }, [startDate, endDate, fetchLimit]);
 
-  //   Scroll handler
+  // ✅ Scroll handler
   const handleScroll = (event) => {
     scrollToTopButtonDisplay(event, setShowFab);
 
@@ -109,13 +120,13 @@ export default function JobAssessment() {
     if (loadingRef.current) return;
 
     if (scrollHeight - scrollTop <= clientHeight + 200) {
-      console.log("  API calling offset:", offsetRef.current);
+      console.log("✅ API calling offset:", offsetRef.current);
       loadingRef.current = true;
 
       fetchEntries(
         tokenRef.current, setEntries, setFilteredEntries, noOp,
         setOpenSnackbar, setSnackbarMessage, setSnackbarSeverity,
-        startDateRef.current, endDateRef.current, limit, offsetRef.current, true
+        startDateRef.current, endDateRef.current, limitRef.current, offsetRef.current, true
       ).then((result) => {
         if (!result || result.data.length === 0) {
           hasMoreRef.current = false;

@@ -3,7 +3,7 @@
 import React, { useState, useEffect,useRef  } from "react";
 import { useRouter } from 'next/navigation';
 import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
-
+import { fetchCompanyDetails } from "../../../../controllers/LeadsControllers.js";
 // Function imports
 import {
   fetchData,
@@ -67,7 +67,7 @@ export default function CustomerOutstand() {
   const router = useRouter();
   const { fmtDate } = useAppTimezone();
   // FrontEnd extracted data states
-  const [token, setToken] = useState("");
+  
 
   // Modal and Alert states
   const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -93,7 +93,8 @@ export default function CustomerOutstand() {
   // Add new states for customers and selected customer
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-
+  const [fetchLimit, setFetchLimit] = useState(null);
+const token = Cookies.get("token");
 
   const loadingRef = useRef(false);
 const hasMoreRef = useRef(true);
@@ -102,7 +103,14 @@ const offsetRef = useRef(0);
 const limitRef = useRef(20);
 const tokenRef = useRef("");
 
-
+useEffect(() => {
+    if (token) {
+      fetchCompanyDetails(token, (limit) => {
+        limitRef.current = parseInt(limit);
+         setFetchLimit(parseInt(limit));
+      });
+    }
+  }, [token]);
   // Set initial date range: start date = today - 1 week, end date = today
   useEffect(() => {
     const today = new Date();
@@ -166,12 +174,12 @@ const tokenRef = useRef("");
   // Fetch data and update status
 useEffect(() => {
   let storedToken = Cookies.get("token");
-  setToken(storedToken);
+  // setToken(storedToken);
   tokenRef.current = storedToken;
 
-  if (!startDate || !endDate) return;
+  if (!startDate || !endDate || !fetchLimit) return;
 
-  //   reset on date change
+  // ✅ reset on date change
   offsetRef.current = 0;
   hasMoreRef.current = true;
   loadingRef.current = false;
@@ -179,7 +187,7 @@ useEffect(() => {
   fetchData(
     axios, storedToken, setData, setFilteredData, updateStatus,
     setOpenSnackbar, setSnackbarMessage, setSnackbarSeverity,
-    startDate, endDate
+    startDate, endDate, limitRef.current
   ).then((result) => {
     if (result) {
       totalRef.current = result.total;
@@ -187,7 +195,7 @@ useEffect(() => {
       hasMoreRef.current = result.total > limitRef.current;
     }
   });
-}, [startDate, endDate]);
+}, [startDate, endDate , fetchLimit]);
 
 
   // Calculate counts based on filtered data
@@ -252,7 +260,7 @@ const onTableScroll = (event) => {
     fetchMoreData(
       axios, tokenRef.current,
       offsetRef.current, limitRef.current,
-      startDateRef.current, endDateRef.current, //   refs not state
+      startDateRef.current, endDateRef.current, // ✅ refs not state
       updateStatus, setData, setFilteredData
     ).then((result) => {
       if (!result || result.rawCount === 0) {
