@@ -9,8 +9,11 @@ import {
   handleSearch,
   handleCardClick,
 } from "../../../../controllers/ServiceInspectionControllers.js";
+import { fetchCompanyDetails } from "../../../../controllers/LeadsControllers.js";
+
 import { scrollToTopButtonDisplay, handleScrollToTop } from "../../../../controllers/ServiceInspectionControllers.js";
-const LIMIT = 17;
+// const LIMIT = 17;
+const [limit,setLimit] = useState(null);
 export default function ServiceInspection() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -89,7 +92,7 @@ const loadMore = useCallback(async () => {
 if (!hasMoreRef.current || isFetchingRef.current) return;
 isFetchingRef.current = true;
   setIsLoadingMore(true);
-  const newOffset = offsetRef.current + LIMIT;
+  const newOffset = offsetRef.current + limit;
   setOffset(newOffset);
 
   await fetchEntries(
@@ -97,7 +100,7 @@ isFetchingRef.current = true;
     setFilteredEntries,
     () => {},
     setError,
-    LIMIT,
+    limit,
     newOffset,
     setHasMore,
     startDate,
@@ -151,7 +154,20 @@ isFetchingRef.current = true;
 
 //   setPageType(Cookies.get("page_type"));
 // }, [startDate,endDate]);
+
+const token = Cookies.get("token");
+
+  useEffect(() => {
+      // const token = Cookies.get("token");
+    if (token) {
+      fetchCompanyDetails(token, setLimit);
+    }
+  }, [token]);
+
+
+
 useEffect(() => {
+  if(token && limit !== null) {
     isFetchingRef.current = false; 
   setOffset(0);
   setHasMore(true);
@@ -163,7 +179,7 @@ useEffect(() => {
     setFilteredEntries,
     setLoading,
     setError,
-    LIMIT,
+    limit,
     0,
     setHasMore,
     startDate,
@@ -172,7 +188,10 @@ useEffect(() => {
   );
 
   setPageType(Cookies.get("page_type"));
-}, [startDate, endDate]);
+}
+}, [startDate, endDate, limit]);
+
+
   const columns = [
     {
       key: "customer_name",

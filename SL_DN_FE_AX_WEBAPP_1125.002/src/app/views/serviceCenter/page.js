@@ -8,6 +8,7 @@ import {
   fetchEntries,
   handleSearch,
 } from "../../../../controllers/ServiceCenterControllers.js";
+import { fetchCompanyDetails } from "../../../../controllers/LeadsControllers.js";
 
 import DynamicListTable from "@/components/DynamicListTable";
 
@@ -83,7 +84,17 @@ if (
   // setOffset,
   // setHasMore);
   // }, [startDate, endDate]);
+const token = Cookies.get("token");
+
+  useEffect(() => {
+      // const token = Cookies.get("token");
+    if (token) {
+      fetchCompanyDetails(token, setLimit);
+    }
+  }, [token]);
+  
 useEffect(() => {
+  if ( limit !== null) {
   offsetRef.current = 0;// reset pagination state
 
   fetchEntries(
@@ -100,7 +111,11 @@ useEffect(() => {
     setHasMore,
     true
   );
-}, [startDate, endDate]);
+}
+}, [startDate, endDate, limit]);
+
+
+
   const columns = [
     {
       key: "customer_name",
