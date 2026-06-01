@@ -18,6 +18,8 @@ import {
   Typography,
   Menu,
   MenuItem,
+  Select,
+  Button,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
@@ -26,14 +28,22 @@ import DynamicListTable from "@/components/DynamicListTable";
 import Navbar from "@/components/navbar";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import Cookies from "js-cookie";
+import { fetchEntries, handleSearch } from "../../../../../controllers/gstinvoiceControllers.js";
+import { companydetails } from "../../../../../controllers/invoiceListControllers";
 
 export default function GSTReport() {
-  const [allData, setAllData] = useState([]);
+  const [entries, setEntries] = useState([]);
+  const [originalEntries, setOriginalEntries] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [downloadMenuAnchor, setDownloadMenuAnchor] = useState(null);
+  const [gstFilter, setGstFilter] = useState("converted");
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [limit, setLimit] = useState(null);
+  const [token, setToken] = useState(null);
 
   const today = new Date();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -54,106 +64,88 @@ export default function GSTReport() {
     severity: "info",
   });
 
-  // Fetch GST invoices with tax breakdown
-  const fetchGSTReports = async (start, end) => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-
-      // Fetch appointments data
-      const response = await fetch(
-     `${process.env.NEXT_PUBLIC_API_URL}/appointment/gst_allappointments?startDate=${start}&endDate=${end}&status=invoiced&include_gst=true`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
+  // Fetch fetch_limit from company details
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      try {
+        const details = await companydetails();
+        if (details?.company_details?.length > 0) {
+          const fetchLimit = Number(details.company_details[0].fetch_limit) || 20;
+          setLimit(fetchLimit);
         }
-      );
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    fetchCompanyDetails();
+  }, []);
 
-      if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+  // Initial load (re-runs on date/filter/limit change)
+  useEffect(() => {
+    if (limit === null) return;
 
-      const result = await response.json();
+    const storedToken = Cookies.get("token");
+    setToken(storedToken);
 
-      // Filter only invoiced appointments with GST
-      const gstData = result
-        .filter(
-          (apt) =>
-            apt.status === "invoiced" && apt.gst_invoice_id
-        )
-        .map((apt) => {
-          // Calculate total tax for all items and split equally into CGST and SGST
-          let totalTax = 0;
+    setEntries([]);
+    setIsSearchMode(false);
 
-          if (apt.services_actual && Array.isArray(apt.services_actual)) {
-            apt.services_actual.forEach((service) => {
-              if (service.items_required && Array.isArray(service.items_required)) {
-                service.items_required.forEach((item) => {
-                  const qty = Number(item.qty || 1);
-                  const price = Number(item.price || 0);
-                  const taxPercent = Number(item.tax || item.item_gst_percent || 0);
-                  let taxAmount = 0;
-
-                  // Calculate tax amount using tax-inclusive formula: (price * qty * taxRate) / (1 + taxRate)
-                  if (taxPercent > 0) {
-                    const taxRate = taxPercent / 100;
-                    taxAmount = (price * qty * taxRate) / (1 + taxRate);
-                  }
-                  totalTax += taxAmount;
-                });
-              }
-            });
-          }
-
-          // Calculate CGST and SGST as half of totalTax, ensuring they sum exactly to totalTax
-          const cgst = parseFloat((totalTax / 2).toFixed(2));
-          const sgst = parseFloat((totalTax - cgst).toFixed(2));
-
-          // invoice_amount includes tax, so base amount = invoice_amount - totalTax
-          const amount = parseFloat((Number(apt.invoice_amount || 0) - totalTax).toFixed(2));
-          const total = parseFloat((Number(apt.invoice_amount || 0)).toFixed(2));
-
-          return {
-            ...apt,
-            gst_no: apt.gst_invoice_id || apt.invoice_id || "N/A",
-            address: apt.city || apt.customer_city || "N/A",
-            phone: apt.phone || apt.customer_phone || "N/A",
-            name: apt.customer_name || "N/A",
-            appointment_no: apt.appointment_id || "N/A",
-            date: apt.appointment_date || apt.invoice_date || "",
-            amount,
-            cgst,
-            sgst,
-            igst: 0,
-            others: 0,
-            total,
-            totalTax: parseFloat(totalTax.toFixed(2)),
-          };
-        });
-
-      setAllData(gstData);
-      setFilteredData(gstData);
-      setSnackbar({
-        open: true,
-        message: `Loaded ${gstData.length} GST records`,
-        severity: "success",
-      });
-    } catch (error) {
+    fetchEntries(
+      storedToken,
+      setEntries,
+      setLoading,
+      (val) => setSnackbar((prev) => ({ ...prev, open: val })),
+      (msg) => setSnackbar((prev) => ({ ...prev, message: msg })),
+      (severity) => setSnackbar((prev) => ({ ...prev, severity })),
+      startDate,
+      endDate,
+      "invoiced",
+      gstFilter,
+      limit,
+      0,
+      false
+    ).catch((error) => {
       console.error("Error fetching GST reports:", error);
       setSnackbar({
         open: true,
         message: "Error loading GST reports",
         severity: "error",
       });
-    } finally {
-      setLoading(false);
+    });
+  }, [startDate, endDate, gstFilter, limit]);
+
+  useEffect(() => {
+    setOriginalEntries(entries);
+  }, [entries]);
+
+  useEffect(() => {
+    if (!searchText.trim()) {
+      setFilteredData(
+        isSearchMode
+          ? entries
+          : entries.filter((entry) => {
+              const baseFilter = entry.status !== "deleted" && entry.status === "invoiced";
+              if (gstFilter === "all") return baseFilter;
+              if (gstFilter === "converted") return baseFilter && entry.gst_invoice_id;
+              return baseFilter;
+            })
+      );
+    } else {
+      const lowerSearch = searchText.toLowerCase();
+      const filtered = entries.filter(
+        (row) =>
+          (row.gst_invoice_id || "").toLowerCase().includes(lowerSearch) ||
+          (row.customer_name || "").toLowerCase().includes(lowerSearch) ||
+          (row.appointment_id || "").toLowerCase().includes(lowerSearch) ||
+          (row.contact?.phone || row.phone || "").toLowerCase().includes(lowerSearch)
+      );
+      setFilteredData(filtered);
     }
-  };
+  }, [searchText, entries, gstFilter, isSearchMode]);
 
   const handleRowToggle = (row) => {
     const newExpanded = new Set(expandedRows);
-    const rowKey = row.gst_no + row.appointment_no;
+    const rowKey = row.appointment_id;
 
     if (newExpanded.has(rowKey)) {
       newExpanded.delete(rowKey);
@@ -182,34 +174,26 @@ export default function GSTReport() {
       const summaryData = [
         [
           "GST Invoice No",
+          "Plate Number",
           "Customer Name",
-          "City",
           "Phone",
           "Appointment No",
           "Date",
-          "Amount",
-          "CGST",
-          "SGST",
-          "IGST",
-          "Others",
-          "Total with GST",
+          "Invoice Amount",
+          "Status",
         ],
       ];
 
       filteredData.forEach((row) => {
         summaryData.push([
-          row.gst_no || "",
-          row.name || "",
-          row.address || "",
-          row.phone || "",
-          row.appointment_no || "",
-          dayjs(row.date).format("DD/MM/YYYY"),
-          row.amount || 0,
-          row.cgst || 0,
-          row.sgst || 0,
-          row.igst || 0,
-          row.others || 0,
-          row.total || 0,
+          row.gst_invoice_id || row.invoice_id || "",
+          row.plateNumber || row.vehicle_id || "",
+          row.customer_name || row.contact?.name || "",
+          row.contact?.phone || row.phone || "",
+          row.appointment_id || "",
+          dayjs(row.appointment_date).format("DD/MM/YYYY"),
+          row.invoice_amount || 0,
+          row.status || "",
         ]);
       });
 
@@ -235,17 +219,13 @@ export default function GSTReport() {
 
       ws["!cols"] = [
         { wch: 15 },
+        { wch: 15 },
         { wch: 20 },
         { wch: 15 },
         { wch: 15 },
-        { wch: 15 },
-        { wch: 12 },
-        { wch: 12 },
-        { wch: 12 },
-        { wch: 12 },
-        { wch: 12 },
         { wch: 12 },
         { wch: 15 },
+        { wch: 12 },
       ];
 
       const wb = XLSX.utils.book_new();
@@ -266,20 +246,16 @@ export default function GSTReport() {
     try {
       const detailedData = [
         [
-          "GstNo",
-          "Name",
-          "AppoinmentNo",
+          "Invoice ID",
+          "Plate Number",
+          "Appointment No",
+          "Customer Name",
           "Phone",
-          "Address",
           "Date",
           "Item Name",
           "Qty",
-          "Tax",
           "Rate",
           "Amount",
-          "CGST",
-          "SGST",
-          "IGST",
           "Total",
         ],
       ];
@@ -287,72 +263,59 @@ export default function GSTReport() {
       filteredData.forEach((row) => {
         const services = row.services_actual || [];
 
-        const uniqueRows = new Map();
+        if (services.length > 0) {
+          services.forEach((service) => {
+            const items = service.items_required || [];
 
-        services.forEach((service) => {
-          const items = service.items_required || [];
+            if (items.length > 0) {
+              items.forEach((item) => {
+                const qty = Number(item.qty || 1);
+                const price = Number(item.price || 0);
+                const amount = qty * price;
 
-          items.forEach((item) => {
-            const qty = Number(item.qty || 1);
-            const price = Number(item.price || 0);
-            const lineTotal = parseFloat((qty * price).toFixed(2));
-            const taxPercent = Number(item.tax || item.item_gst_percent || 0);
-
-            let itemGst = 0;
-            if (taxPercent > 0) {
-              const taxRate = taxPercent / 100;
-              itemGst = (price * qty * taxRate) / (1 + taxRate);
-            }
-
-            const cgst = parseFloat((itemGst / 2).toFixed(2));
-            const sgst = parseFloat((itemGst - cgst).toFixed(2));
-            const totalTax = parseFloat((cgst + sgst).toFixed(2));
-            const amount = parseFloat((lineTotal - totalTax).toFixed(2));
-            const itemTotal = lineTotal;
-
-            const key = `${row.gst_no}_${item.item_name}_${qty}_${price}`;
-
-            if (!uniqueRows.has(key)) {
-              uniqueRows.set(key, [
-                row.gst_no || "",
-                row.name || "",
-                row.appointment_no || "",
-                row.phone || "",
-                row.address || "",
-                dayjs(row.date).format("DD/MM/YYYY"),
-                item.item_name || "",
-                qty,
-                taxPercent || 0,
-                parseFloat(price.toFixed(2)),
-                amount,
-                cgst,
-                sgst,
-                0,
-                itemTotal,
+                detailedData.push([
+                  row.gst_invoice_id || row.invoice_id || "",
+                  row.plateNumber || row.vehicle_id || "",
+                  row.appointment_id || "",
+                  row.customer_name || row.contact?.name || "",
+                  row.contact?.phone || row.phone || "",
+                  dayjs(row.appointment_date).format("DD/MM/YYYY"),
+                  item.item_name || "",
+                  qty,
+                  parseFloat(price.toFixed(2)),
+                  parseFloat(amount.toFixed(2)),
+                  parseFloat(row.invoice_amount || 0).toFixed(2),
+                ]);
+              });
+            } else {
+              detailedData.push([
+                row.gst_invoice_id || row.invoice_id || "",
+                row.plateNumber || row.vehicle_id || "",
+                row.appointment_id || "",
+                row.customer_name || row.contact?.name || "",
+                row.contact?.phone || row.phone || "",
+                dayjs(row.appointment_date).format("DD/MM/YYYY"),
+                "",
+                "",
+                "",
+                "",
+                parseFloat(row.invoice_amount || 0).toFixed(2),
               ]);
             }
           });
-        });
-
-        if (uniqueRows.size > 0) {
-          uniqueRows.forEach((rowData) => detailedData.push(rowData));
         } else {
           detailedData.push([
-            row.gst_no || "",
-            row.name || "",
-            row.appointment_no || "",
-            row.phone || "",
-            row.address || "",
-            dayjs(row.date).format("DD/MM/YYYY"),
+            row.gst_invoice_id || row.invoice_id || "",
+            row.plateNumber || row.vehicle_id || "",
+            row.appointment_id || "",
+            row.customer_name || row.contact?.name || "",
+            row.contact?.phone || row.phone || "",
+            dayjs(row.appointment_date).format("DD/MM/YYYY"),
             "",
             "",
             "",
             "",
-            row.amount || 0,
-            row.cgst || 0,
-            row.sgst || 0,
-            row.igst || 0,
-            row.total || 0,
+            parseFloat(row.invoice_amount || 0).toFixed(2),
           ]);
         }
       });
@@ -378,19 +341,15 @@ export default function GSTReport() {
       }
 
       ws["!cols"] = [
-        { wch: 12 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
         { wch: 20 },
         { wch: 15 },
-        { wch: 15 },
-        { wch: 15 },
         { wch: 12 },
         { wch: 20 },
-        { wch: 8 },
         { wch: 8 },
         { wch: 10 },
-        { wch: 12 },
-        { wch: 12 },
-        { wch: 12 },
         { wch: 12 },
         { wch: 12 },
       ];
@@ -404,25 +363,24 @@ export default function GSTReport() {
     }
   };
 
-  useEffect(() => {
-    fetchGSTReports(startDate, endDate);
-  }, [startDate, endDate]);
-
-  useEffect(() => {
-    if (!searchText.trim()) {
-      setFilteredData(allData);
+  const handleSearchSubmit = async () => {
+    if (!searchText || searchText.trim() === "") {
+      setIsSearchMode(false);
+      await handleSearch("", originalEntries, setEntries, token);
     } else {
-      const lowerSearch = searchText.toLowerCase();
-      const filtered = allData.filter(
-        (row) =>
-          row.gst_no.toLowerCase().includes(lowerSearch) ||
-          row.name.toLowerCase().includes(lowerSearch) ||
-          row.appointment_no.toLowerCase().includes(lowerSearch) ||
-          row.address.toLowerCase().includes(lowerSearch)
-      );
-      setFilteredData(filtered);
+      setIsSearchMode(true);
+      await handleSearch(searchText, originalEntries, setEntries, token);
     }
-  }, [searchText, allData]);
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchText(value);
+    if (!value || value.trim() === "") {
+      setIsSearchMode(false);
+      handleSearch("", originalEntries, setEntries, token);
+    }
+  };
 
   const columns = [
     {
@@ -443,104 +401,111 @@ export default function GSTReport() {
             },
           }}
         >
-          {expandedRows.has(row.gst_no + row.appointment_no) ? (
-            <ExpandLessIcon />
-          ) : (
-            <ExpandMoreIcon />
-          )}
+          {expandedRows.has(row.appointment_id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         </IconButton>
       ),
     },
-    { key: "gst_no", label: "GstNo", minWidth: "100px" },
-    { key: "name", label: "Name", minWidth: "150px" },
-    { key: "appointment_no", label: "AppoinmentNo", minWidth: "120px" },
-    { key: "phone", label: "Phone", minWidth: "120px" },
-    { key: "address", label: "Address", minWidth: "150px" },
     {
-      key: "date",
+      key: "gst_invoice_id",
+      label: "Invoice ID",
+      minWidth: "100px",
+      format: (value, row) => value || row.invoice_id || "N/A",
+    },
+    {
+      key: "plateNumber",
+      label: "Plate Number",
+      minWidth: "100px",
+      format: (value, row) => value || row.vehicle_id || "N/A",
+    },
+    {
+      key: "customer_name",
+      label: "Customer Name",
+      minWidth: "150px",
+      format: (value, row) => value || row.contact?.name || "N/A",
+    },
+    {
+      key: "phone",
+      label: "Phone",
+      minWidth: "120px",
+      format: (value, row) => row.contact?.phone || row.phone || "N/A",
+    },
+    {
+      key: "appointment_id",
+      label: "Appointment No",
+      minWidth: "120px",
+    },
+    {
+      key: "appointment_date",
       label: "Date",
       minWidth: "100px",
       format: (value) => dayjs(value).format("DD/MM/YYYY"),
     },
     {
-      key: "amount",
-      label: "Amount",
-      minWidth: "100px",
+      key: "invoice_amount",
+      label: "Invoice Amount",
+      minWidth: "120px",
       format: (value) => `₹${parseFloat(value || 0).toFixed(2)}`,
     },
     {
-      key: "total",
-      label: "Total",
+      key: "status",
+      label: "Status",
       minWidth: "100px",
-      format: (value) => `₹${parseFloat(value || 0).toFixed(2)}`,
     },
   ];
 
   return (
-    <div>
+    <Box>
       <DynamicListTable
         title="GST Reports"
         columns={columns}
-        data={allData}
+        data={entries}
         filteredData={filteredData}
         loading={loading}
         searchText={searchText}
-        onSearchChange={(e) => setSearchText(e.target.value)}
-        onSearchSubmit={() => {}}
+        onSearchChange={handleSearchChange}
+        onSearchSubmit={handleSearchSubmit}
         dateFilters={[
           {
             label: "Start Date",
             value: startDate,
-            onChange: (e) => {
-              const newStart = e.target.value;
-              if (newStart === startDate) return;
-              setStartDate(newStart);
-              if (newStart && endDate) {
-                fetchGSTReports(newStart, endDate);
-              }
-            },
+            onChange: (e) => setStartDate(e.target.value),
           },
           {
             label: "End Date",
             value: endDate,
-            onChange: (e) => {
-              const newEnd = e.target.value;
-              if (newEnd === endDate) return;
-              setEndDate(newEnd);
-              if (startDate && newEnd) {
-                fetchGSTReports(startDate, newEnd);
-              }
-            },
+            onChange: (e) => setEndDate(e.target.value),
           },
         ]}
         extraControls={[
-          <div key="download-btn" style={{ position: "relative" }}>
-            <button
-              onClick={handleDownloadMenuOpen}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#4caf50",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: "pointer",
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              <DownloadIcon style={{ fontSize: "18px" }} />
-              Download
-            </button>
-            <Menu
-              anchorEl={downloadMenuAnchor}
-              open={Boolean(downloadMenuAnchor)}
-              onClose={handleDownloadMenuClose}
-            >
-              <MenuItem onClick={handleDownloadSummary}>Download Summary</MenuItem>
-              <MenuItem onClick={handleDownloadDetailed}>Download Detailed</MenuItem>
-            </Menu>
+          <div key="controls" style={{ display: "flex", gap: 16 }}>
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={handleDownloadMenuOpen}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#4caf50",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <DownloadIcon style={{ fontSize: "18px" }} />
+                Download
+              </button>
+              <Menu
+                anchorEl={downloadMenuAnchor}
+                open={Boolean(downloadMenuAnchor)}
+                onClose={handleDownloadMenuClose}
+              >
+                <MenuItem onClick={handleDownloadSummary}>Download Summary</MenuItem>
+                <MenuItem onClick={handleDownloadDetailed}>Download Detailed</MenuItem>
+              </Menu>
+            </div>
           </div>,
         ]}
         snackbar={{
@@ -552,185 +517,163 @@ export default function GSTReport() {
           label: "GST Records",
         }}
         customRowRenderer={(row, rowIdx) => (
-              <React.Fragment key={row.gst_no + row.appointment_no || rowIdx}>
-                <TableRow
-                  sx={{
-                    cursor: "pointer",
-                    "&:hover": {
-                      backgroundColor: "#f5f5f5",
-                    },
-                  }}
-                >
-                  {columns.map((column) => {
-                    let cellValue = row[column.key];
-                    if (column.format) {
-                      cellValue = column.format(cellValue, row);
-                    }
-                    const isReactElement = React.isValidElement(cellValue);
-                    return (
-                      <TableCell
-                        key={column.key}
-                        sx={{
-                          fontSize: { xs: "11px", sm: "13px" },
-                          padding: { xs: "8px", sm: "16px" },
-                          maxWidth: column.minWidth || "100px",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {isReactElement ? cellValue : cellValue || "N/A"}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-
-                {expandedRows.has(row.gst_no + row.appointment_no) && (
-                  <TableRow
+          <React.Fragment key={row.appointment_id || rowIdx}>
+            <TableRow
+              sx={{
+                cursor: "pointer",
+                "&:hover": {
+                  backgroundColor: "#f5f5f5",
+                },
+              }}
+            >
+              {columns.map((column) => {
+                let cellValue = row[column.key];
+                if (column.format) {
+                  cellValue = column.format(cellValue, row);
+                }
+                const isReactElement = React.isValidElement(cellValue);
+                return (
+                  <TableCell
+                    key={column.key}
                     sx={{
-                      backgroundColor: "#fafafa",
-                      borderTop: "1px solid #ddd",
+                      fontSize: { xs: "11px", sm: "13px" },
+                      padding: { xs: "8px", sm: "16px" },
+                      maxWidth: column.minWidth || "100px",
+                      wordBreak: "break-word",
                     }}
                   >
-                    <TableCell colSpan={columns.length} sx={{ padding: "20px" }}>
-                      <Box>
-                        <Box sx={{ marginBottom: 3, backgroundColor: "white", padding: 2, borderRadius: 1 }}>
-                          <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: 2 }}>
-                            GST Summary
+                    {isReactElement ? cellValue : cellValue || "N/A"}
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+
+            {expandedRows.has(row.appointment_id) && (
+              <TableRow
+                sx={{
+                  backgroundColor: "#fafafa",
+                  borderTop: "1px solid #ddd",
+                }}
+              >
+                <TableCell colSpan={columns.length} sx={{ padding: "20px" }}>
+                  <Box>
+                    <Box sx={{ marginBottom: 3, backgroundColor: "white", padding: 2, borderRadius: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: 2 }}>
+                        Appointment Details
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2">
+                            <strong>Customer Name:</strong> {row.customer_name || row.contact?.name || "N/A"}
                           </Typography>
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} sm={6}>
-                              <Typography variant="body2">
-                                <strong>Customer Name:</strong> {row.name}
-                              </Typography>
-                              <Typography variant="body2">
-                                <strong>City:</strong> {row.address}
-                              </Typography>
-                              <Typography variant="body2">
-                                <strong>Phone:</strong> {row.phone}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                              <Typography variant="body2">
-                                <strong>GST Invoice No:</strong> {row.gst_no}
-                              </Typography>
-                              <Typography variant="body2">
-                                <strong>Date:</strong> {dayjs(row.date).format("DD/MM/YYYY")}
-                              </Typography>
-                            </Grid>
-                          </Grid>
-                        </Box>
-
-                        <Box sx={{ marginBottom: 3, backgroundColor: "white", padding: 2, borderRadius: 1 }}>
-                          <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: 2 }}>
-                            Tax Details
+                          <Typography variant="body2">
+                            <strong>Phone:</strong> {row.contact?.phone || row.phone || "N/A"}
                           </Typography>
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} sm={4}>
-                              <Typography variant="body2">
-                                <strong>Amount:</strong> ₹{parseFloat(row.amount || 0).toFixed(2)}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <Typography variant="body2">
-                                <strong>Total Tax:</strong> ₹{parseFloat(row.totalTax || 0).toFixed(2)}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <Typography variant="body2">
-                                <strong>CGST:</strong> ₹{parseFloat(row.cgst || 0).toFixed(2)}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <Typography variant="body2">
-                                <strong>SGST:</strong> ₹{parseFloat(row.sgst || 0).toFixed(2)}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <Typography variant="body2">
-                                <strong>IGST:</strong> ₹{parseFloat(row.igst || 0).toFixed(2)}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <Typography variant="body2">
-                                <strong>Others:</strong> ₹{parseFloat(row.others || 0).toFixed(2)}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <Typography variant="body2" sx={{ fontWeight: "bold", color: "#1976d2" }}>
-                                <strong>Total:</strong> ₹{parseFloat(row.total || 0).toFixed(2)}
-                              </Typography>
-                            </Grid>
-                          </Grid>
-                        </Box>
+                          <Typography variant="body2">
+                            <strong>Plate Number:</strong> {row.plateNumber || row.vehicle_id || "N/A"}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2">
+                            <strong>Invoice ID:</strong> {row.gst_invoice_id || row.invoice_id || "N/A"}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>Appointment ID:</strong> {row.appointment_id || "N/A"}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>Date:</strong> {dayjs(row.appointment_date).format("DD/MM/YYYY")}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
 
-                        {row.services_actual && row.services_actual.length > 0 && (
-                          <Box sx={{ marginBottom: 3, backgroundColor: "white", padding: 2, borderRadius: 1 }}>
-                            <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: 2 }}>
-                              Services & Items
-                            </Typography>
-                            <Box sx={{ overflowX: "auto" }}>
-                              <Table
-                                size="small"
-                                sx={{
-                                  tableLayout: "fixed",
-                                  width: "80%",
-                                  "& .MuiTableCell-root": {
-                                    border: "1px solid #ddd",
-                                    padding: "8px",
-                                    fontSize: "13px",
-                                    verticalAlign: "middle",
-                                  },
-                                }}
-                              >
-                                <TableHead sx={{ backgroundColor: "#e0e0e0" }}>
-                                  <TableRow>
-                                    <TableCell sx={{ width: "25%" }}>Item Name</TableCell>
-                                    <TableCell sx={{ width: "10%", textAlign: "center" }}>Qty</TableCell>
-                                    <TableCell sx={{ width: "10%", textAlign: "right" }}>Rate</TableCell>
-                                    <TableCell sx={{ width: "10%", textAlign: "right" }}>Amount</TableCell>
-                                    <TableCell sx={{ width: "15%", textAlign: "right" }}>GST</TableCell>
-                                  </TableRow>
-                                </TableHead>
+                    <Box sx={{ marginBottom: 3, backgroundColor: "white", padding: 2, borderRadius: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: 2 }}>
+                        Invoice Details
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={4}>
+                          <Typography variant="body2">
+                            <strong>Invoice Amount:</strong> ₹{parseFloat(row.invoice_amount || 0).toFixed(2)}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                          <Typography variant="body2">
+                            <strong>Status:</strong> {row.status || "N/A"}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
 
-                                <TableBody>
-                                  {row.services_actual.map((service, idx) =>
-                                    service.items_required && service.items_required.length > 0 ? (
-                                      service.items_required.map((item, itemIdx) => {
-                                        const rate = parseFloat(item.price) || 0;
-                                        const qty = parseFloat(item.qty) || 0;
-                                        const amount = rate * qty;
-                                        const gst = parseFloat(item.item_gst_amount) || 0;
-                                        return (
-                                          <TableRow key={`${idx}-${itemIdx}`}>
-                                            <TableCell>{item.item_name || "N/A"}</TableCell>
-                                            <TableCell align="center">{qty}</TableCell>
-                                            <TableCell align="right">₹{rate.toFixed(2)}</TableCell>
-                                            <TableCell align="right">₹{amount.toFixed(2)}</TableCell>
-                                            <TableCell align="right">₹{gst.toFixed(2)}</TableCell>
-                                          </TableRow>
-                                        );
-                                      })
-                                    ) : (
-                                      <TableRow key={idx}>
-                                        <TableCell>{service.service_description || "N/A"}</TableCell>
-                                        <TableCell align="center">—</TableCell>
-                                        <TableCell align="right">—</TableCell>
-                                        <TableCell align="right">—</TableCell>
-                                        <TableCell align="right">—</TableCell>
+                    {row.services_actual && row.services_actual.length > 0 && (
+                      <Box sx={{ marginBottom: 3, backgroundColor: "white", padding: 2, borderRadius: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: 2 }}>
+                          Services & Items
+                        </Typography>
+                        <Box sx={{ overflowX: "auto" }}>
+                          <Table
+                            size="small"
+                            sx={{
+                              tableLayout: "fixed",
+                              width: "100%",
+                              "& .MuiTableCell-root": {
+                                border: "1px solid #ddd",
+                                padding: "8px",
+                                fontSize: "13px",
+                                verticalAlign: "middle",
+                              },
+                            }}
+                          >
+                            <TableHead sx={{ backgroundColor: "#e0e0e0" }}>
+                              <TableRow>
+                                <TableCell sx={{ width: "30%" }}>Item Name</TableCell>
+                                <TableCell sx={{ width: "10%", textAlign: "center" }}>Qty</TableCell>
+                                <TableCell sx={{ width: "15%", textAlign: "right" }}>Rate</TableCell>
+                                <TableCell sx={{ width: "15%", textAlign: "right" }}>Amount</TableCell>
+                                <TableCell sx={{ width: "15%", textAlign: "right" }}>Tax %</TableCell>
+                              </TableRow>
+                            </TableHead>
+
+                            <TableBody>
+                              {row.services_actual.map((service, idx) =>
+                                service.items_required && service.items_required.length > 0 ? (
+                                  service.items_required.map((item, itemIdx) => {
+                                    const rate = parseFloat(item.price) || 0;
+                                    const qty = parseFloat(item.qty) || 1;
+                                    const amount = rate * qty;
+                                    const taxPercent = Number(item.tax || item.item_gst_percent || 0);
+                                    return (
+                                      <TableRow key={`${idx}-${itemIdx}`}>
+                                        <TableCell>{item.item_name || "N/A"}</TableCell>
+                                        <TableCell align="center">{qty}</TableCell>
+                                        <TableCell align="right">₹{rate.toFixed(2)}</TableCell>
+                                        <TableCell align="right">₹{amount.toFixed(2)}</TableCell>
+                                        <TableCell align="right">{taxPercent}%</TableCell>
                                       </TableRow>
-                                    )
-                                  )}
-                                </TableBody>
-                              </Table>
-                            </Box>
-                          </Box>
-                        )}
+                                    );
+                                  })
+                                ) : (
+                                  <TableRow key={idx}>
+                                    <TableCell>{service.service_description || "N/A"}</TableCell>
+                                    <TableCell align="center">—</TableCell>
+                                    <TableCell align="right">—</TableCell>
+                                    <TableCell align="right">—</TableCell>
+                                    <TableCell align="right">—</TableCell>
+                                  </TableRow>
+                                )
+                              )}
+                            </TableBody>
+                          </Table>
+                        </Box>
                       </Box>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </React.Fragment>
+                    )}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            )}
+          </React.Fragment>
         )}
       />
-    </div>
+    </Box>
   );
 }
