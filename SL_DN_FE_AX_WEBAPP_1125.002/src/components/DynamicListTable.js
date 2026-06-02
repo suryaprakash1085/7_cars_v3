@@ -189,6 +189,7 @@ export default function DynamicListTable(config) {
                 value={searchText}
                 onChange={onSearchChange}
                 onKeyUp={handleKeyPress}
+                autoComplete="off"
                 sx={{
                   backgroundColor: "white",
                   borderRadius: 1,

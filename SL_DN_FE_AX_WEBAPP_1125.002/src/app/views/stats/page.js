@@ -100,9 +100,10 @@ export default function Stats() {
 
           const data = await response.json();
           console.log("Fetched data:", data); // Log fetched data
-          setEntries(data);
-          setFilteredEntries(data);
-          const grouped = data.reduce((acc, entry) => {
+          const entries = Array.isArray(data) ? data : data.data || [];
+          setEntries(entries);
+          setFilteredEntries(entries);
+          const grouped = entries.reduce((acc, entry) => {
             (acc[entry.status] = acc[entry.status] || []).push(entry);
             return acc;
           }, {});

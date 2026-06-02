@@ -46,7 +46,8 @@ export const getCustomer = async (storedToken, setCustomerData) => {
       throw new Error('Failed to fetch customer data');
     }
 
-    const result = await response.json();
+    const response_data = await response.json();
+    const result = Array.isArray(response_data) ? response_data : Array.isArray(response_data.data) ? response_data.data : [];
     console.log({result});
     setCustomerData(result);
 
@@ -139,6 +140,3 @@ console.log({data})
     console.error("Error fetching vehicles:", error.message);
   }
 };
-
-
-

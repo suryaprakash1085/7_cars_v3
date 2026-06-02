@@ -77,7 +77,8 @@ const [endDate, setEndDate] = useState(formatDateLocal(today));
 
       if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
 
-      const result = await response.json();
+      const response_data = await response.json();
+      const result = Array.isArray(response_data) ? response_data : Array.isArray(response_data.data) ? response_data.data : [];
 
       // Fetch invoice entries to get invoice IDs
       let invoiceEntries = [];
