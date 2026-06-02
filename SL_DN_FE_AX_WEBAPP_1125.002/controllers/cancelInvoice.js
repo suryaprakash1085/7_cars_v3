@@ -124,8 +124,9 @@ export const handleScrollToTop = () => {
 };
 
 export const scrollToTopButtonDisplay = (event, setShowFab) => {
-  const { scrollTop } = event.target;
-  setShowFab(scrollTop > 10);
+  const target=event.currentTarget;
+  const  scrollTop = target.scrollTop;
+  setShowFab(scrollTop > 300);
 };
 
 
