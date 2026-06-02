@@ -1,6 +1,6 @@
 "use client";
 // React and Next imports
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useRef  } from "react";
 import Cookies from "js-cookie"; // Import js-cookie for cookie management
 
 // Function imports
@@ -71,7 +71,9 @@ import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
 import DeleteIcon from "@mui/icons-material/Delete";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import { fetchCompanyDetails } from "../../../../../controllers/LeadsControllers";
 
+// const LIMIT = 20;
 export default function LedgerBook() {
   // FrontEnd extracted data states
   let [token, setToken] = useState(null);
@@ -87,7 +89,7 @@ export default function LedgerBook() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-  const limit = 10;
+  // const limit = 10;
 
   // FrontEnd form input states
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,6 +101,7 @@ export default function LedgerBook() {
   const [changedData, setChangedData] = useState("");
   const [editedData, setEditedData] = useState({});
   const [deleteRowId, setDeleteRowId] = useState(null);
+
 
   // Add state variables for date range
  const today = new Date();
@@ -118,20 +121,33 @@ const [endDate, setEndDate] = useState(
 
   // Set initial date range to current month
   
-
   useEffect(() => {
     // Retrieve login status and phone number from cookies on component mount
     const storedStatus = Cookies.get("connection_status");
     const storedPhone = Cookies.get("phone");
+    const storedToken = Cookies.get("token");
 
     if (storedStatus === "active" && storedPhone) {
       setIsLoggedIn(true);
       setMobileNumber(storedPhone);
     }
+      tokenRef.current = storedToken; 
+  setToken(storedToken);
   }, []);
 
   // Backend rows states
   const [rows, setRows] = useState([]);
+
+ const offsetRef = useRef(0);
+  const hasMoreRef = useRef(true);
+  const loadingRef = useRef(false);
+  const totalRef = useRef(0);
+  const tokenRef = useRef("");
+  const startDateRef = useRef(startDate);
+  const endDateRef = useRef(endDate);
+
+
+
   // const [filteredRows, setFilteredRows] = useState(rows);
   // const filteredRows = filterRows(rows, searchQuery, filterType);
   // Function to filter expenses by date range
@@ -165,29 +181,99 @@ const [endDate, setEndDate] = useState(
   //   endDate
   // );
 
-  useEffect(() => {
-    if (!startDate || !endDate) return;
-    
-    let storedToken = Cookies.get("token");
-    setToken(storedToken);
-    getAllExpenses(
-      storedToken,
-      setRows,
-      setOpenSnackbar,
-      setSnackbarMessage,
-      setSnackbarSeverity,
-      limit,
-      isLoading,
-      setIsLoading,
-      hasMore,
-      setHasMore,
-      offset,
-      setOffset,
-      filterType,
-      startDate,
-      endDate
-    );
-  }, [startDate, endDate]);
+
+    const[limit,setLimit]=useState(null);
+
+useEffect(() => {
+  if (token) {
+    fetchCompanyDetails(token, setLimit);
+  }
+}, [token]);
+  
+
+console.log("limit:", limit);
+
+useEffect(() => {
+  if (!startDate || !endDate || limit === null) return;
+
+  let storedToken = Cookies.get("token");
+  // setToken(storedToken);
+    tokenRef.current = storedToken;
+
+//  setToken(storedToken);
+
+ //  Set all refs
+  tokenRef.current = storedToken;
+  startDateRef.current = startDate;
+  endDateRef.current = endDate;
+
+  //  Reset pagination refs
+  offsetRef.current = 0;
+  hasMoreRef.current = true;
+  loadingRef.current = false;
+  totalRef.current = 0;
+
+// console.log("token in useEffect:", storedToken);
+  setRows([]);      // clear old data on date change
+  setIsLoading(true);
+
+  getAllExpenses(
+    storedToken,
+    setRows,
+    setOpenSnackbar,
+    setSnackbarMessage,
+    setSnackbarSeverity,
+    startDate,
+    endDate,
+    limit,
+    0,
+    false
+  ).then((result) => {
+    if (result) {
+      totalRef.current = result.total;                        // ✅ e.g. 811
+      offsetRef.current = result.data.length;                 // ✅ e.g. 20
+      hasMoreRef.current = result.data.length < result.total; // ✅ true = more to load
+      console.log("total:", result.total, "loaded:", result.data.length, "hasMore:", hasMoreRef.current);
+    }
+  }).finally(() => setIsLoading(false));
+}, [startDate, endDate, limit]);
+
+  const handleScroll = (event) => {
+    scrollToTopButtonDisplay(event, setShowFab);
+
+    const { scrollTop, scrollHeight, clientHeight } = event.target;
+
+    if (!hasMoreRef.current) return;
+    if (loadingRef.current) return;
+
+    if (scrollHeight - scrollTop <= clientHeight + 200) {
+      console.log("  Loading more, offset:", offsetRef.current);
+      loadingRef.current = true;
+
+      getAllExpenses(
+        tokenRef.current,
+        setRows,
+        setOpenSnackbar,
+        setSnackbarMessage,
+        setSnackbarSeverity,
+        startDateRef.current,
+        endDateRef.current,
+        limit,
+        offsetRef.current,
+        true  // append = true
+      ).then((result) => {
+        if (!result || result.data.length === 0) {
+          hasMoreRef.current = false;
+          loadingRef.current = false;
+        } else {
+          const newOffset = offsetRef.current + result.data.length;
+          offsetRef.current = newOffset;
+          hasMoreRef.current = newOffset < totalRef.current;
+          loadingRef.current = false;
+        }
+      });
+    }
+  };
 
   const handleExportExcel = () => {
     // Prepare data for export
@@ -480,25 +566,7 @@ const [endDate, setEndDate] = useState(
               overflowY: "auto",
               position: "relative",
             }}
-            onScroll={(event) => {
-              scrollToTopButtonDisplay(event, setShowFab);
-              infiniteScroll(
-                event,
-                token,
-                setRows,
-                searchQuery,
-                setOpenSnackbar,
-                setSnackbarMessage,
-                setSnackbarSeverity,
-                limit,
-                isLoading,
-                setIsLoading,
-                hasMore,
-                setHasMore,
-                offset,
-                setOffset
-              );
-            }}
+          onScroll={handleScroll}
           >
             <Table stickyHeader sx={{ minWidth: 1100 }}>
               <TableHead>
@@ -1036,8 +1104,8 @@ const [endDate, setEndDate] = useState(
                 style={{
                   backgroundColor: "white",
                   color: "primary",
-                  position: "absolute",
-                  bottom: 40,
+                  position: "fixed",
+                  bottom: 140,
                   right: 40,
                   zIndex: 10,
                 }}
