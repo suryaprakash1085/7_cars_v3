@@ -57,15 +57,18 @@ export default function WorkSchedule() {
     severity: "success",
   });
 
-  useEffect(() => {
-    fetchUsers(setUsers, token);
-    fetchWorkSchedule(setWorkSchedules, token);
-  }, []);
+  // useEffect(() => {
+  //   fetchUsers(setUsers, token);
+  //   fetchWorkSchedule(setWorkSchedules, token);
+  // }, []);
 
   useEffect(() => {
     const token = Cookies.get("token");
     setToken(token);
+     if (token) {
+         fetchUsers(setUsers, token); 
     fetchWorkSchedule(setWorkSchedules, token);
+     }
   }, []);
 
   const handleSubmit = async () => {
