@@ -663,7 +663,7 @@ const fetchCompanyDetails = async (token, setLimit) => {
     ) {
       const fetchLimit = data.company_details[0]?.fetch_limit;
       // console.log("Extracted fetch_limit:", fetchLimit);
-      setLimit(fetchLimit);
+     setLimit(Number(fetchLimit)); // instead of setLimit(fetchLimit)
       return data.company_details[0]?.fetch_limit;
     } else {
       console.warn("No company details found in API response.");
