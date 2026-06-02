@@ -61,8 +61,8 @@ export const getDisplayPayments = (filteredPayments, uniqueVehiclePayments) => {
 export const fetchPayments = async (startDate, endDate) => {
   try {
     const queryParts = ["type=supplier"];
-    if (startDate) queryParts.push(`start_date=${startDate}`);
-    if (endDate) queryParts.push(`end_date=${endDate}`);
+    if (startDate) queryParts.push(`startdate=${startDate}`);
+    if (endDate) queryParts.push(`enddate=${endDate}`);
 
     const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/finance/transactions?${queryParts.join("&")}`,
       {

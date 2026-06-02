@@ -323,57 +323,59 @@ const handleCallFeedbackChange = (index, rows, setRows, newFeedback) => {
 //   }
 // };
 
-const getAllExpenses = async (
-  token,
-  setRows,
-  setOpenSnackbar,
-  setSnackbarMessage,
-  setSnackbarSeverity,
-  limit,
-  isLoading,
-  setIsLoading,
-  hasMore,
-  setHasMore,
-  offset,
-  setOffset,
-  filterType,
-  startDate,
-  endDate
+//  Replace getAllExpenses
+export const getAllExpenses = async (
+  storedToken, setRows, setOpenSnackbar, setSnackbarMessage, setSnackbarSeverity, startDate, endDate, limit, offset, append
 ) => {
   try {
-    setIsLoading(true);
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/finance/transactions?start_date=${startDate}&end_date=${endDate}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/finance/transactions?startdate=${startDate}&enddate=${endDate}&limit=${limit}&offset=${offset}`,
       {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${storedToken}`,
           "Content-Type": "application/json",
         },
       }
     );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    const json = await response.json();
+    const data = json.data || json || [];
+    const total = json.total ?? data.length;
+
+    if (append) {
+      setRows((prev) => {
+        const existingIds = new Set(prev.map((r) => r.id));
+        const unique = data.filter((r) => !existingIds.has(r.id));
+        return [...prev, ...unique];
+      });
+    } else {
+      setRows(data);
     }
 
-    let transactions = await response.json();
-    console.log({ t: transactions.data });
-    if (response.status === 200 || response.status === 201) {
-      // setRows((prev) => [...prev, ...transactions.data]);
-      setRows((prev) => [...transactions.data]);
+    return { data, total };
 
-      setHasMore(transactions.length === limit);
-      setOffset((prevOffset) => prevOffset + limit);
-    }
   } catch (error) {
-    console.log("Failed to fetch expenses:", error);
-    setSnackbarMessage("Failed to fetch expenses. Please try again.");
+    console.log("Failed to fetch transactions:", error);
+    setSnackbarMessage("Failed to fetch transactions. Please try again.");
     setOpenSnackbar(true);
     setSnackbarSeverity("error");
-  } finally {
-    setIsLoading(false);
+    return { data: [], total: 0 };
   }
+};
+
+//  Scroll to top — targets ledger table container
+export const handleScrollToTop = () => {
+  const container = document.getElementById("scrollable-table");
+  if (container) container.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+//  Show FAB when scrolled down
+export const scrollToTopButtonDisplay = (event, setShowFab) => {
+  const { scrollTop } = event.target;
+  setShowFab(scrollTop > 200);
 };
 
 const debounce = (func, delay) => {
@@ -473,17 +475,17 @@ const infiniteScroll = debounce(
   200 // 200ms debounce delay
 );
 
-const handleScrollToTop = () => {
-  const container = document.getElementById("scrollable-table");
-  if (container) {
-    container.scrollTo({ top: 0, behavior: "smooth" });
-  }
-};
+// const handleScrollToTop = () => {
+//   const container = document.getElementById("scrollable-table");
+//   if (container) {
+//     container.scrollTo({ top: 0, behavior: "smooth" });
+//   }
+// };
 
-const scrollToTopButtonDisplay = (event, setShowFab) => {
-  const { scrollTop } = event.target;
-  setShowFab(scrollTop > 1000); // Show FAB after scrolling down 200px
-};
+// const scrollToTopButtonDisplay = (event, setShowFab) => {
+//   const { scrollTop } = event.target;
+//   setShowFab(scrollTop > 1000); // Show FAB after scrolling down 200px
+// };
 
 const handleAddClick = (setEditRowId, setEditedData, setIsAdding) => {
   const newRow = {
