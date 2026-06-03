@@ -437,11 +437,11 @@ function ExecutiveSummary({ startDate, endDate, companyDetails }) {
                     const formattedStart = new Date(startDate).toISOString().split("T")[0];
                     const formattedEnd = new Date(endDate).toISOString().split("T")[0];
                     const data = await fetchData(
-                        `/appointment/get_appointments_by_date/${formattedStart}/${formattedEnd}`
+                        `/reports/get_appointments_by_date/${formattedStart}/${formattedEnd}`
                     );
                     const result = Array.isArray(data) ? data : [];
                     if (result.length === 0) {
-                        const allData = await fetchData('/appointment/');
+                        const allData = await fetchData('/reports/');
                         setAppointments(Array.isArray(allData) ? allData : []);
                     } else {
                         setAppointments(result);
@@ -449,7 +449,7 @@ function ExecutiveSummary({ startDate, endDate, companyDetails }) {
                 }
             } catch (error) {
                 console.error('Error fetching appointments:', error);
-                const allData = await fetchData('/appointment/');
+                const allData = await fetchData('/reports/');
                 setAppointments(Array.isArray(allData) ? allData : []);
             } finally {
                 setAppointmentsLoading(false);
@@ -744,7 +744,7 @@ console.log('ServiceAnalytics received dates:', { startDate, endDate });
                     .toISOString()
                     .split("T")[0];
 
-                url = `/appointment/get_appointments_by_date/${formattedStart}/${formattedEnd}`;
+                url = `/reports/get_appointments_by_date/${formattedStart}/${formattedEnd}`;
             }
 
             console.log("ServiceAnalytics API URL:", url);
@@ -1069,14 +1069,26 @@ function CustomerIntelligence({ startDate, endDate, companyDetails }) {
 useEffect(() => {
     const fetchCustomers = async () => {
         setLoading(true);
+
         try {
-            //   report page — no limit, with date filter
-            const url = startDate && endDate
-                ? `/customer/?limit=100000&startDate=${startDate}&endDate=${endDate}`
-                : `/customer/?limit=100000`;
+            let url = "/customer/";
+
+            if (startDate && endDate) {
+                const formattedStart = new Date(startDate).toISOString().split("T")[0];
+                const formattedEnd = new Date(endDate).toISOString().split("T")[0];
+                url = `/customer/?startDate=${formattedStart}&endDate=${formattedEnd}`;
+            }
 
             const data = await fetchData(url);
-            setCustomers(Array.isArray(data) ? data : []);
+            const normalizedCustomers = Array.isArray(data)
+                ? data
+                : Array.isArray(data?.data)
+                    ? data.data
+                    : Array.isArray(data?.customers)
+                        ? data.customers
+                        : [];
+
+            setCustomers(normalizedCustomers);
         } catch (error) {
             console.error("Customer API error:", error);
             setCustomers([]);
@@ -1084,8 +1096,9 @@ useEffect(() => {
             setLoading(false);
         }
     };
+
     fetchCustomers();
-}, [startDate, endDate]);//   API runs when startDate or endDate changes
+}, [startDate, endDate]);
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" height={400}>
@@ -1397,8 +1410,8 @@ function FinancialDashboard({ startDate, endDate, companyDetails }) {
 
     const formatDate = (date) => date ? date.format('YYYY-MM-DD') : '';
 
-    const transactionUrl = `/finance/transactions?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
-    const inventoryUrl = `/inventory?limit=100000&startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
+    const transactionUrl = `/reports/transactions?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
+    const inventoryUrl = `/reports/inventory?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
 
     //   FIX: use URL as dependency (IMPORTANT)
     const { data: transactionsResponse, loading: transactionsLoading } =
@@ -1695,13 +1708,13 @@ function OperationsCenter({ companyDetails, startDate, endDate }) {
     //   dynamic URLs (ONLY change here)
     const customerUrl =
         startDate && endDate
-            ? `/customer?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`
-            : `/customer/`;
+            ? `/reports?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`
+            :  `/reports`;
 
     const appointmentUrl =
         startDate && endDate
-            ? `/appointment?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`
-            : `/appointment/`;
+            ?  `/reports?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`
+            : `/reports`;
 
     //   API calls (auto refetch on date change)
     const { data: customers, loading: customersLoading } =
@@ -2026,8 +2039,8 @@ function WorkforceAnalytics({ startDate, endDate, companyDetails }) {
     //   dynamic API url
     const appointmentApi =
         formattedStartDate && formattedEndDate
-            ? `/appointment/get_appointments_by_date/${formattedStartDate}/${formattedEndDate}`
-            : `/appointment`;
+            ? `/reports/get_appointments_by_date/${formattedStartDate}/${formattedEndDate}`
+            : `/reports`;
 
     //   API calls
     const { data: users, loading: usersLoading } = useApiData('/auth/users');
@@ -2379,8 +2392,8 @@ const formatDate = (date) => {
 
   const inventoryUrl =
   startDate && endDate
-    ? `/inventory?limit=100000&startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`
-    : `/inventory?limit=100000`;
+    ? `/reports/inventory?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`
+    : `/reports/inventory`;
 
   const { data: inventory, loading: inventoryLoading } =
    useApiData(inventoryUrl, [startDate, endDate]);
@@ -2806,8 +2819,8 @@ function InventoryIntelligence({ startDate, endDate, companyDetails }) {
     // =========================
     const apiUrl =
         formattedStart && formattedEnd
-            ? `/inventory?limit=100000&startDate=${formattedStart}&endDate=${formattedEnd}`
-            : `/inventory?limit=100000`;
+            ? `/reports/inventory?startDate=${formattedStart}&endDate=${formattedEnd}`
+            : `/reports/inventory`;
 
     const refreshKey = `${formattedStart}-${formattedEnd}`;
 
@@ -3163,9 +3176,9 @@ function BusinessInsights({ startDate, endDate, companyDetails }) {
     const formatDate = (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "");
 
     //   Apply date filter like FinancialDashboard
-    const customerUrl = `/customer?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
-    const transactionUrl = `/finance/transactions?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
-    const appointmentUrl = `/appointment?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
+    const customerUrl = `/reports?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
+    const transactionUrl = `/reports/transactions?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
+    const appointmentUrl = `reports/appointment?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
 
     const { data: customers, loading: customersLoading } =
         useApiData(customerUrl, [startDate, endDate]);
